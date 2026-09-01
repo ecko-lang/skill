@@ -1,14 +1,5 @@
 # Ecko skill for Claude Code
 
-Ask a model to write [Ecko](https://ecko.sh) and it writes Python with the
-keywords swapped.
-
-The mistakes are predictable, and it is the same handful every time: `|x|`
-lambdas, deprecated since 0.9.4 and still the first thing most models reach for.
-`e.kind` on a caught error that is sometimes a plain string. `m.missing`
-expected to return null when it actually raises. Nested quotes inside string
-interpolation that will not parse.
-
 This skill closes that gap. Ecko is a language where `ai` is a keyword rather
 than a library, so a model has no training data to fall back on and guesses from
 the languages it does know. Here it gets the real thing instead.

@@ -5,15 +5,32 @@ name: verify
 on:
   push:
   pull_request:
+  # Weekly, because nobody pushes to a skill repo for months and the language
+  # underneath it keeps moving. Note GitHub disables scheduled runs after 60
+  # days without a commit - re-enable from the Actions tab if that happens.
   schedule:
-    - cron: "0 6 * * 1"   # weekly: catches a release that changes behaviour
+    - cron: "0 6 * * 1"
 
 jobs:
   verify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: Install ecko
-        run: curl -fsSL https://ecko.sh/install | sh
+        env:
+          # Pin the location. Left to itself the installer picks /usr/local/bin
+          # when that is writable (it is, on a runner) and ~/.local/bin
+          # otherwise, so hardcoding either one is a coin flip.
+          ECKO_INSTALL_DIR: ${{ github.workspace }}/.bin
+        run: |
+          curl -fsSL https://ecko.sh/install | sh
+          echo "$ECKO_INSTALL_DIR" >> "$GITHUB_PATH"
+
+      - name: Show the version under test
+        run: ecko --version
+
+      # No ECKO override: this exercises the documented default, `ecko` from
+      # PATH, which is what a reader running verify.sh locally will get.
       - name: Verify every sample runs
-        run: ECKO="$HOME/.local/bin/ecko" ./verify.sh SKILL.md reference/*.md
+        run: ./verify.sh SKILL.md reference/*.md
