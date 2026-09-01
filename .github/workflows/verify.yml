@@ -1,0 +1,19 @@
+name: verify
+
+# The skill's samples must run against the released language, or the skill is
+# teaching things that do not work. This is the whole quality gate.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"   # weekly: catches a release that changes behaviour
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ecko
+        run: curl -fsSL https://ecko.sh/install | sh
+      - name: Verify every sample runs
+        run: ECKO="$HOME/.local/bin/ecko" ./verify.sh SKILL.md reference/*.md
