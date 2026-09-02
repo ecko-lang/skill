@@ -242,25 +242,38 @@ test.case("errors", fn() {
 failure, and forces mock mode. Put tests in `tests/` - a root-level
 `*_test.ecko` ships inside `ecko pack` archives.
 
-## The five mistakes an LLM makes first
+## The seven mistakes an LLM makes first
 
-1. **Nested double quotes inside interpolation.** `"{upper("x")}"` is a parse
+1. **Every regex must be a raw string.** `re.test("^[A-Z]{3}$", x)` returns
+   **false** with no error, because `{3}` was interpolated away. Write
+   `r"^[A-Z]{3}$"`. `ecko check` warns (`regex-interpolation`), which is another
+   reason to run it.
+2. **Nested double quotes inside interpolation.** `"{upper("x")}"` is a parse
    error. Bind first: `u = upper("x")` then `"{u}"`.
-2. **A literal `{` in a string starts interpolation.** Escape it `\{`, or use a
-   raw string `r"{...}"`. For JSON literals use `r"""{"a": 1}"""`.
-3. **Writing `|x| ...` for a lambda.** Deprecated. Use `fn(x) ...`.
-4. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")`.
-5. **Assuming `m.missing` returns null.** It raises. Use `get(m, "missing")`.
+3. **A literal `{` in a string starts interpolation.** Escape it `\{`, or use a
+   raw string. For JSON literals use `r"""{"a": 1}"""`.
+4. **The string module is `std.str`, not `std.string`.** A module binds the last
+   segment of its path, and one called `string` would displace the `string()`
+   converter for the whole file. `import std.string` is an error naming the fix.
+5. **Writing `|x| ...` for a lambda.** Deprecated since 0.9.4. Use `fn(x) ...`.
+6. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")` - a caught
+   error is sometimes a plain string, and `get` is total.
+7. **Assuming `m.missing` returns null.** It raises. Use `get(m, "missing")`.
 
-`reference/gotchas.md` has the full list with the exact error text each one
-produces.
+**Do not guess builtin names.** There is no `min_by`, `fold`, `append`, `merge`,
+`eprint` or `hash`. `reference/builtins.md` is the probed list of all 102, with
+replacements for the names that feel like they should exist.
+
+`reference/gotchas.md` has 28 traps with the exact error each produces.
 
 ## Reference files
 
+- `reference/builtins.md` - all 102 globals, probed against the runtime, plus
+  the names that do not exist and what to use instead
 - `reference/language.md` - complete syntax: strings, bytes, slicing, modules,
   packages, channels, templates, contracts
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
 - `reference/stdlib.md` - all 40 `std.*` modules and every builtin, indexed
-- `reference/gotchas.md` - traps, with the error each produces
+- `reference/gotchas.md` - 28 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs for common tasks

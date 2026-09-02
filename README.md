@@ -13,6 +13,10 @@ ecko --version
 
 Plus [Claude Code](https://claude.com/claude-code).
 
+This skill tracks the current language, so it needs at least the version in
+`.ecko-version`. CI checks that and says so plainly if the released binary is
+behind, rather than letting the samples fail for an unrelated-looking reason.
+
 ## Install
 
 ```bash
@@ -29,10 +33,11 @@ command turns up. Nothing to configure.
 | file | what it holds |
 |---|---|
 | `SKILL.md` | the entry point: mental model, syntax, AI primitives, the five mistakes a model makes first |
+| `reference/builtins.md` | all 102 globals, probed against the runtime, and the names that do not exist |
 | `reference/language.md` | strings, slicing, templates, contracts, modules, concurrency, the CLI |
 | `reference/ai.md` | typed output and coercion, retries, tool calling, sessions, budgets, tracing |
 | `reference/stdlib.md` | 40 `std.*` modules and 364 exports, indexed |
-| `reference/gotchas.md` | 17 traps, each with the exact error it produces |
+| `reference/gotchas.md` | 28 traps, each with the exact error it produces |
 | `reference/recipes.md` | 10 complete programs, all of which run offline |
 
 ## Every sample is executed
@@ -45,7 +50,7 @@ So every fenced block ships only after it has run:
 
 ```bash
 ./verify.sh SKILL.md reference/*.md
-# --- 42/42 blocks verified ---
+# --- 50/50 blocks verified ---
 ```
 
 - ` ```ecko ` blocks must run cleanly, offline, with no API key.

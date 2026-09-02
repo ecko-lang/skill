@@ -200,3 +200,163 @@ users** while `tests/foo_test.ecko` does not.
 `pmap`, `async` tasks and `http.serve` handlers each snapshot captured
 variables. Mutating an ordinary outer `mut` changes only that worker's copy and
 is silently lost. Share through `cell`, deliberately.
+
+---
+
+# Found while building a real app
+
+The traps above are the ones a model hits in the first ten minutes. These came
+out of someone actually shipping something, and several are worse because they
+fail quietly.
+
+## 18. The string module is `std.str`, not `std.string`
+
+```ecko
+import std.str
+print(string(42))              # 42     - the converter
+print(str.title("a b c"))      # A B C  - the module
+```
+
+Writing `import std.string` is an error that names the fix
+(`No module called 'std.string' - check the name`).
+It is `str` for a reason worth knowing, because it explains a rule: **a module
+binds the last segment of its path**, so a module called `string` would bind
+`string` and displace the `string()` converter for the whole file. It used to,
+and every conversion in an importing file failed with `Can't call module`.
+
+The same rule means no other std module can shadow a builtin either - that is
+now enforced by a test in the compiler, so this is the only one that ever bit.
+
+## 19. Regex quantifiers need raw strings
+
+This is the worst one on the page, because nothing errors:
+
+```ecko
+import std.re
+print(re.test("^[A-Z]{3}$", "ABC"))   # false  - the {3} was interpolated away
+print(re.test(r"^[A-Z]{3}$", "ABC"))  # true   - raw string, pattern intact
+```
+
+`{3}` is an interpolation hole in a normal string, so the pattern that reaches
+the regex engine is not the one you wrote. You get a silently wrong answer, not
+a parse error. **Write every regex as a raw string**, whether or not it
+currently contains braces.
+
+`ecko check` catches this (`regex-interpolation`) and names the fix. It flags
+only an integer hole, since `"^{prefix}$"` is a legitimate dynamic pattern.
+
+## 20. Units are seconds
+
+`sleep(1)` sleeps one second. HTTP timeouts are seconds too. Neither is
+documented, and milliseconds is the more common convention elsewhere, so this is
+worth pinning:
+
+```ecko
+import std.time
+before = time.monotonic()
+sleep(1)
+print(time.monotonic() - before > 0.9)   # true
+```
+
+The exceptions are the `std.bg` schedulers, which take milliseconds
+(`bg.after(1000, ...)`), and the `ECKO_*_MS` environment variables.
+
+## 21. `Decimal` record fields are not enforced
+
+`Int` fields are checked. `Decimal` fields are not:
+
+```ecko
+type Offer = Offer { price: Decimal }
+loose = get({ v: "notanumber" }, "v")
+print(Offer(loose).price)      # notanumber - straight through
+```
+
+An `Int` field in the same position throws
+``field `n` of `U` expects Int, got string``. Until that gap closes, coerce in a
+constructor function rather than trusting the annotation:
+
+```ecko
+type Offer = Offer { price: Decimal }
+fn offer(price_text) = Offer(decimal(price_text))
+print(offer("19.99").price)
+```
+
+## 22. `json.encode` adds `__type__` to records
+
+```ecko
+import std.json
+type U = U { a: Int }
+print(json.encode(U(1)))        # {"__type__":"U","a":1}
+```
+
+Fine for round-tripping inside Ecko, wrong for an API payload. Build a plain map
+when the JSON crosses a boundary.
+
+## 23. `sum` rejects decimals
+
+```
+sum([1.5m, 2.5m])
+```
+→ `error: sum needs numbers, got decimal`
+
+Even though `1.5m + 2.5m` is fine. Fold instead:
+
+```ecko
+print(reduce([1.5m, 2.5m], fn(a, b) a + b, 0m))
+```
+
+## 24. There are two padding functions and only one takes a fill character
+
+```ecko
+import std.fmt
+import std.str
+print(fmt.pad_left("7", 3, "0"))    # "  7"  - the fill argument is ignored
+print(str.pad_start("7", 3, "0"))   # "007"  - this is the one that works
+```
+
+Worse, `fmt.pad_left` accepts **any** number of extra arguments and silently
+drops them: two, three and four arguments all return `"  7"`, with no arity
+error. Every other function in the language raises on a bad arity, so this is
+the one place a wrong call is invisible.
+
+Use `std.str`'s `pad_start` / `pad_end` when the fill matters. Note the
+different naming: `std.fmt` says left/right, `std.str` says start/end.
+
+## 25. Qualified constructors do not work in patterns
+
+`mod.Offer(1, 2)` constructs. The same name in a pattern does not:
+
+```
+match o { mod.Offer(a, b) => a + b }
+```
+→ `error: Expected '=>' here, but found '.'`
+
+Match on the shape instead, or import the type unqualified.
+
+## 26. `cli.help(spec, "subcommand")` ignores the second argument
+
+It prints the top-level help every time, so a subcommand's own options never
+appear. Build a spec map for the subcommand and pass that to `cli.help` on its
+own.
+
+Related: global options must come **before** the subcommand on the command line,
+or they are rejected as unknown.
+
+## 27. The credential lint fires on an existence check
+
+```
+import std.os
+if os.env("MY_API_KEY") != null { print("configured") }
+```
+→ `unwrapped-credential: os.env("MY_API_KEY") reads a credential but is not wrapped`
+
+Any env name containing `KEY` or `TOKEN` trips it, even when you are only asking
+whether it is set. `os.env_or(name, "")` avoids the warning and reads better
+than wrapping a presence check in `reveal(secret(...))`.
+
+## 28. Piping output into `head` exits 101
+
+`ecko prog.ecko | head -1` exits 101 with a broken-pipe panic from the runtime,
+even though the output is correct. It affects any truncated pipe, not just
+`head`. Nothing is wrong with your program. Redirect to a file if an exit code
+matters, until the runtime handles EPIPE.

@@ -57,7 +57,7 @@ other top-level key becomes a member, keeping its JSON type.
 | `std.re` | regex: test, find, captures, replace, split | 8 |
 | `std.signal` | OS signal handlers | 5 |
 | `std.sql` | SQLite/Postgres/MySQL with transactions | 9 |
-| `std.string` | the full string surface (50 functions) | 50 |
+| `std.str` | the full string surface (50 functions) | 50 |
 | `std.term` | terminal UI: colours, cursor, raw mode, frames | 49 |
 | `std.test` | test cases and assertions for `ecko test` | 6 |
 | `std.time` | clock, format, parse, monotonic | 6 |
@@ -127,7 +127,7 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.sql`** (9) - `begin`, `close`, `commit`, `exec`, `open`, `query`, `query_one`, `rollback`, `transaction`
 
-**`std.string`** (50) - `capitalize`, `center`, `char_at`, `chars`, `chr`, `contains`, `count`, `ends_with`, `eq_ignore_case`, `from`, `from_utf8`, `from_utf8_lossy`, `index_of`, `is_alnum`, `is_alpha`, `is_ascii`, `is_blank`, `is_digit`, `is_empty`, `is_lower`, `is_space`, `is_upper`, `join`, `last_index_of`, `len`, `lines`, `lower`, `ord`, `pad_end`, `pad_start`, `partition`, `repeat`, `replace`, `replace_first`, `reverse`, `rpartition`, `rsplit`, `split`, `split_whitespace`, `starts_with`, `substring`, `swapcase`, `title`, `trim`, `trim_end`, `trim_prefix`, `trim_start`, `trim_suffix`, `upper`, `zfill`
+**`std.str`** (50) - `capitalize`, `center`, `char_at`, `chars`, `chr`, `contains`, `count`, `ends_with`, `eq_ignore_case`, `from`, `from_utf8`, `from_utf8_lossy`, `index_of`, `is_alnum`, `is_alpha`, `is_ascii`, `is_blank`, `is_digit`, `is_empty`, `is_lower`, `is_space`, `is_upper`, `join`, `last_index_of`, `len`, `lines`, `lower`, `ord`, `pad_end`, `pad_start`, `partition`, `repeat`, `replace`, `replace_first`, `reverse`, `rpartition`, `rsplit`, `split`, `split_whitespace`, `starts_with`, `substring`, `swapcase`, `title`, `trim`, `trim_end`, `trim_prefix`, `trim_start`, `trim_suffix`, `upper`, `zfill`
 
 **`std.term`** (49) - `alt_screen`, `black`, `blink`, `blue`, `bold`, `bright_black`, `bright_blue`, `bright_cyan`, `bright_green`, `bright_magenta`, `bright_red`, `bright_white`, `bright_yellow`, `clear`, `clear_down`, `clear_line`, `color`, `cyan`, `dim`, `down`, `goto`, `gray`, `green`, `grey`, `hide_cursor`, `is_tty`, `italic`, `left`, `link`, `magenta`, `poll`, `raw_mode`, `read_key`, `red`, `restore_cursor`, `reverse`, `rgb`, `right`, `save_cursor`, `show_cursor`, `size`, `strikethrough`, `strip`, `style`, `underline`, `up`, `white`, `width`, `yellow`
 

@@ -27,8 +27,19 @@ jobs:
           curl -fsSL https://ecko.sh/install | sh
           echo "$ECKO_INSTALL_DIR" >> "$GITHUB_PATH"
 
-      - name: Show the version under test
-        run: ecko --version
+      # The skill documents the current language, so it can briefly run ahead
+      # of the released binary. Check that explicitly: a clear "needs X, got Y"
+      # beats every sample failing with an unrelated error.
+      - name: Check the released binary is new enough
+        run: |
+          need=$(cat .ecko-version)
+          have=$(ecko --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
+          echo "skill needs >= $need, runner has $have"
+          if [ "$(printf '%s\n%s\n' "$need" "$have" | sort -V | head -1)" != "$need" ]; then
+            echo "::error::this skill documents Ecko $need; the released binary is $have."
+            echo "::error::the samples will fail until $need ships. Nothing is wrong with the skill."
+            exit 1
+          fi
 
       # No ECKO override: this exercises the documented default, `ecko` from
       # PATH, which is what a reader running verify.sh locally will get.
