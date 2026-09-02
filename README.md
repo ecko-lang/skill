@@ -76,3 +76,7 @@ teaching a model something that stopped being true.
 
 Found a trap the skill does not cover, or a sample that no longer runs? Open an
 issue or a pull request. The only hard rule is that `./verify.sh` passes.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
