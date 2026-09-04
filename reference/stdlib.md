@@ -148,3 +148,23 @@ other top-level key becomes a member, keeping its JSON type.
 **`std.yaml`** (4) - `parse`, `read`, `stringify`, `write`
 
 **`std.zlib`** (4) - `deflate`, `gunzip`, `gzip`, `inflate`
+
+## Behaviour worth knowing
+
+The export list above is complete; these are the places where the shape of a
+result surprises people.
+
+- **`std.re`** - `find` and `captures` answer a miss with `null`; `find_all` and
+  `captures_all` answer it with an empty list. Guard the singular with
+  `== null`.
+- **`std.time`** - `now()` is milliseconds since the epoch, `monotonic()` is
+  seconds since an arbitrary start. Two clocks, two units.
+- **`std.http`** - `serve` binds `0.0.0.0` unless you pass `host:`. A streaming
+  response no longer occupies a handler slot, and is bounded separately by
+  `ECKO_MAX_STREAMS` (default 1024).
+- **`std.ws`** - a server-side upgrade must be same-origin unless you list
+  `origins:` on `http.serve`.
+- **`std.sql`** - `exec`, `query` and `query_one` take an optional third
+  argument of bind parameters.
+- **Every module** rejects extra arguments now, so a stray argument is an error
+  rather than being ignored.

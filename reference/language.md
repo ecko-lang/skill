@@ -183,6 +183,12 @@ fetches, vendors and pins a sha256 in `ecko.lock`; `ecko install` rebuilds
 `vendor/` from the lock. **The manifest `name` must equal the vendored
 directory name.**
 
+The manifest is found by walking **up** from the importing file, so a bare
+`import mypkg` works anywhere in the project - from `app/`, from `tests/`, at
+any depth - and `vendor/` is read from the same place. The nearest `ecko.json`
+wins, so a nested project is its own root rather than borrowing its parent's
+dependencies.
+
 Packages are capability-gated: the importer's `grant` decides what the package
 may do, and a denied operation throws `{ kind: "capability", ... }`.
 

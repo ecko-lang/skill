@@ -39,6 +39,17 @@ print(r"""{"a": 1}""")  # the JSON idiom - r"..." ends at the first quote
 `fmt.format` templates must be raw strings for the same reason:
 `fmt.format(r"{} of {}", a, b)`.
 
+This is the trap that catches people writing CSS or HTML in a string. When it
+happens in a file you `import`, `ecko check` names it for what it is:
+
+```
+unparsable-import: import './style.ecko' resolves but does not parse:
+  In string interpolation: Parse error: Unexpected token: ':'
+```
+
+so a `does not resolve`-looking message is about a genuinely missing file, not
+a brace.
+
 ## 3. `|x| ...` lambdas are deprecated
 
 They still parse, but `ecko check` warns:
@@ -175,13 +186,22 @@ print(g(5))
 
 When ambiguous, `fn(x) ({ ... })` is always a map.
 
-## 14. Arity is checked at the call site, by `ecko check`
+## 14. Arity and argument names are checked at the call site, by `ecko check`
 
 ```
 fn f(a, b) = a
 f(1)
 ```
 → `arity-mismatch: 'f' needs at least 2 argument(s), got 1` - before the program runs.
+
+A named argument the function does not declare is caught the same way, with a
+suggestion:
+
+```
+fn serve(a, b, host) = a
+serve(1, 2, hots: "x")
+```
+→ `unknown-named-argument: 'serve' has no parameter 'hots' - did you mean 'host'?`
 
 ## 15. Async callbacks are rejected where a result is needed immediately
 
@@ -261,25 +281,38 @@ print(time.monotonic() - before > 0.9)   # true
 The exceptions are the `std.bg` schedulers, which take milliseconds
 (`bg.after(1000, ...)`), and the `ECKO_*_MS` environment variables.
 
-## 21. `Decimal` record fields are not enforced
+**`time.now()` is the other exception, and it is the one that bites.** It
+returns milliseconds since the epoch, while `time.monotonic()` returns seconds.
+Two clocks in one module, two units:
 
-`Int` fields are checked. `Decimal` fields are not:
+```ecko
+import std.time
+print(time.now() > 1000000000000)        # true - milliseconds
+before = time.monotonic()
+sleep(0.25)
+print(time.monotonic() - before < 1)     # true - seconds
+```
+
+Timing a request with `monotonic` and labelling the result `ms` is wrong by a
+factor of a thousand, and it looks perfectly plausible in a log. Multiply by
+1000 before you call it milliseconds.
+
+## 21. A `Decimal` field refuses a float literal
+
+`Decimal` fields are enforced now. The surprise is which values pass: an `Int`
+widens, a `String` is refused, and so is a **float literal**, which is exactly
+what a price looks like when you type it.
 
 ```ecko
 type Offer = Offer { price: Decimal }
-loose = get({ v: "notanumber" }, "v")
-print(Offer(loose).price)      # notanumber - straight through
+print(Offer(19).price)                   # 19 - an Int widens
+print(Offer(decimal("19.99")).price)     # 19.99 - the way to write a price
 ```
 
-An `Int` field in the same position throws
-``field `n` of `U` expects Int, got string``. Until that gap closes, coerce in a
-constructor function rather than trusting the annotation:
-
-```ecko
-type Offer = Offer { price: Decimal }
-fn offer(price_text) = Offer(decimal(price_text))
-print(offer("19.99").price)
-```
+`Offer(19.99)` is ``field `price` of `Offer` expects Decimal, got float``, and
+`Offer("19.99")` is the same with `string`. Admitting binary floating point
+through a declared `Decimal` would defeat the point of the type, so build the
+value with `decimal(...)` from a string.
 
 ## 22. `json.encode` adds `__type__` to records
 
@@ -292,37 +325,7 @@ print(json.encode(U(1)))        # {"__type__":"U","a":1}
 Fine for round-tripping inside Ecko, wrong for an API payload. Build a plain map
 when the JSON crosses a boundary.
 
-## 23. `sum` rejects decimals
-
-```
-sum([1.5m, 2.5m])
-```
-→ `error: sum needs numbers, got decimal`
-
-Even though `1.5m + 2.5m` is fine. Fold instead:
-
-```ecko
-print(reduce([1.5m, 2.5m], fn(a, b) a + b, 0m))
-```
-
-## 24. There are two padding functions and only one takes a fill character
-
-```ecko
-import std.fmt
-import std.str
-print(fmt.pad_left("7", 3, "0"))    # "  7"  - the fill argument is ignored
-print(str.pad_start("7", 3, "0"))   # "007"  - this is the one that works
-```
-
-Worse, `fmt.pad_left` accepts **any** number of extra arguments and silently
-drops them: two, three and four arguments all return `"  7"`, with no arity
-error. Every other function in the language raises on a bad arity, so this is
-the one place a wrong call is invisible.
-
-Use `std.str`'s `pad_start` / `pad_end` when the fill matters. Note the
-different naming: `std.fmt` says left/right, `std.str` says start/end.
-
-## 25. Qualified constructors do not work in patterns
+## 23. Qualified constructors do not work in patterns
 
 `mod.Offer(1, 2)` constructs. The same name in a pattern does not:
 
@@ -333,16 +336,7 @@ match o { mod.Offer(a, b) => a + b }
 
 Match on the shape instead, or import the type unqualified.
 
-## 26. `cli.help(spec, "subcommand")` ignores the second argument
-
-It prints the top-level help every time, so a subcommand's own options never
-appear. Build a spec map for the subcommand and pass that to `cli.help` on its
-own.
-
-Related: global options must come **before** the subcommand on the command line,
-or they are rejected as unknown.
-
-## 27. The credential lint fires on an existence check
+## 24. The credential lint fires on an existence check
 
 ```
 import std.os
@@ -354,9 +348,71 @@ Any env name containing `KEY` or `TOKEN` trips it, even when you are only asking
 whether it is set. `os.env_or(name, "")` avoids the warning and reads better
 than wrapping a presence check in `reveal(secret(...))`.
 
-## 28. Piping output into `head` exits 101
+## 25. `std.*` functions reject extra arguments
 
-`ecko prog.ecko | head -1` exits 101 with a broken-pipe panic from the runtime,
-even though the output is correct. It affects any truncated pipe, not just
-`head`. Nothing is wrong with your program. Redirect to a file if an exit code
-matters, until the runtime handles EPIPE.
+Passing a module function more arguments than it takes is an error, the same as
+for a builtin or one of your own functions. It used to be ignored silently.
+
+```
+math.gcd(12, 18, "nonsense")   # math.gcd takes at most 2 arguments, got 3
+str.upper("ab", "junk")        # str.upper takes at most 1 argument, got 2
+```
+
+Functions with genuinely optional trailing arguments still take them -
+`str.trim(s, chars)`, `sql.query(db, sql, params)`, `zlib.gzip(data, level)` -
+and `fs.join`, `fmt.format` and `bg.spawn` are variadic.
+
+## 26. `re.captures` returns `null` on a miss, `captures_all` returns `[]`
+
+Singular answers "no match" with `null`; plural answers it with an empty list.
+
+```ecko
+import std.re
+print(re.captures(r"(\d+)", "none here") == null)     # true
+print(len(re.captures_all(r"(\d+)", "none here")))    # 0
+```
+
+So guard a singular result with `== null`, and a plural one with `len(...) == 0`.
+`re.find` and `find_all` split the same way.
+
+## 27. An untyped `ai ... using [tools]` returns the tool's value
+
+Not the model's prose. This is the same offline and against a real provider.
+
+```ecko
+@tool("look it up")
+fn lookup(q) = { answer: "42", sources: ["a"] }
+
+r = ai "lookup the answer" using [lookup]
+print(get(r, "answer"))          # 42 - the tool's return value
+```
+
+When you want the model's own answer with tools available, **type the call**:
+`ai[Summary] "..." using [lookup]` coerces the final answer instead.
+
+## 28. `http.serve` binds every interface
+
+The default host is `0.0.0.0`, so a dev server is reachable from the network you
+are on. Pass `host:` for loopback only:
+
+```ecko-check
+import std.http
+http.serve(8080, fn(req) http.text("hi"), host: "127.0.0.1")
+```
+
+## 29. A WebSocket upgrade must be same-origin
+
+An upgrade whose `Origin` header does not match the request's `Host` is refused
+with 403, which stops another site opening your socket with a visitor's cookies.
+Name a legitimate cross-origin caller:
+
+```ecko-check
+import std.http
+import std.ws
+http.serve(8080, fn(req) http.text("hi"),
+    on_ws: fn(c) ws.recv(c),
+    origins: ["https://app.example"])
+```
+
+Clients that send no `Origin` at all - everything that is not a browser - are
+unaffected.

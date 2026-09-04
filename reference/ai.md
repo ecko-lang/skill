@@ -81,7 +81,37 @@ Each function needs a `@tool("description")`. Names resolve in the lexical scope
 of the `ai` expression. Live, the tools a model requests in one round run
 **concurrently**, each bounded by `ECKO_AI_TOOL_TIMEOUT_MS` (default 30000); the
 loop is capped at `ECKO_AI_MAX_TOOL_ROUNDS` (default 8). A failing tool yields
-an error string back to the model, so one bad tool never stalls the loop.
+an error string back to the model, so one bad tool never stalls the loop. Each
+result is capped at `ECKO_AI_TOOL_MAX_RESULT` bytes (default 32768) with the cut
+marked, because a tool result stays in the conversation for every later round.
+
+**What an untyped call returns.** The last invoked tool's return value, not the
+model's prose - the same offline and against a real provider. If no tool runs,
+you get the model's answer instead.
+
+```ecko
+@tool("look it up")
+fn lookup(q) = { answer: "42", sources: ["a", "b"] }
+
+r = ai "lookup the answer" using [lookup]
+print(get(r, "answer"))      # 42
+```
+
+So when you want the model's own answer with tools available, **type the call**
+and it coerces the final answer instead:
+
+```ecko
+@tool("look it up")
+fn lookup(q) = "42"
+
+type Evidence = Evidence { answer: String }
+print(type_of(ai[Evidence] "lookup the answer" using [lookup]))
+```
+
+**Arguments are checked.** A named argument your function does not declare comes
+back to the model as an error rather than being dropped, one it left out takes
+your declared default, and only parameters without a default are advertised as
+required.
 
 **Runtime-discovered tools** use a spec map instead of a bare identifier, which
 is how an MCP server or plugin registry offers tools that have no source-level
