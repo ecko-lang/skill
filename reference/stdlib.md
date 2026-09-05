@@ -165,6 +165,15 @@ result surprises people.
 - **`std.ws`** - a server-side upgrade must be same-origin unless you list
   `origins:` on `http.serve`.
 - **`std.sql`** - `exec`, `query` and `query_one` take an optional third
-  argument of bind parameters.
+  argument of bind parameters. `transaction` rolls back if the function raises
+  **and** if the commit itself fails, so a failed commit does not leave the
+  connection inside the transaction.
+- **`std.proc`** - a spawned child is signalled when your program ends, unless
+  you pass `detach: true`. Nothing you spawn outlives you by accident.
+- **`std.signal`** - closing the last subscription gives the signal back to the
+  OS, so Ctrl-C works again afterwards. Delivery is asynchronous by a few
+  milliseconds; `signal.next` waits, so you will not notice.
+- **`std.term`** - `raw_mode(true)` is undone on exit, on error, **and** when a
+  signal kills the program, so a TUI cannot strand your shell without echo.
 - **Every module** rejects extra arguments now, so a stray argument is an error
   rather than being ignored.

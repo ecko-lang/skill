@@ -3,30 +3,30 @@
 Every trap below is real, with the exact message it produces. Ordered by how
 often an LLM hits it.
 
-## 1. Nested double quotes inside interpolation
-
-```
-print("hi {upper("bob")}")
-```
-→ `error: Unclosed interpolation brace in string`
-
-The interpolation is scanned before the expression is parsed, so the inner `"`
-closes the string. **Bind the value first:**
+## 1. A hole may contain a string (since 0.22.0)
 
 ```ecko
-u = upper("bob")
-print("hi {u}")
+print("hi {upper("bob")}")     # hi BOB
+print("brace {"}"} inside")    # brace } inside
 ```
 
-Single-argument calls on a name are fine - `"hi {upper(name)}"` works. It is
-only a nested *string literal* that breaks.
+This used to fail with `Unclosed interpolation brace in string`, and the advice
+was to bind the value first. **That workaround is no longer needed** - if you
+learned it, unlearn it. A `{` opens a hole only when it actually balances, and
+the hole's own quotes and braces belong to it.
+
+Escaping still works and raw strings still opt out entirely, both below.
 
 ## 2. A literal `{` in a string starts interpolation
 
 ```
-print("a{b")
+print("a{b")                       # Unclosed interpolation brace in string
+print("css: body { color: red }")  # Parse error: Unexpected token: ':'
 ```
-→ `error: Unclosed interpolation brace in string`
+
+The rule is **balance**. A `{` with no matching `}` is an unterminated hole. A
+`{...}` that *does* balance is read as a hole and parsed as Ecko - which is why
+CSS fails with a parse error rather than an unclosed one.
 
 Escape it, or go raw:
 
@@ -416,3 +416,19 @@ http.serve(8080, fn(req) http.text("hi"),
 
 Clients that send no `Origin` at all - everything that is not a browser - are
 unaffected.
+
+## 30. A spawned process dies with your program (since 0.22.0)
+
+`proc.spawn` children are signalled when the program ends - including when it is
+stopped with Ctrl-C or `SIGTERM` rather than returning normally. A script cannot
+leave strays behind by forgetting to `kill`.
+
+```ecko-check
+import std.proc
+p = proc.spawn("some-server", [])           # dies with the program
+q = proc.spawn("daemon", [], detach: true)  # deliberately survives it
+```
+
+If you actually want a survivor, say `detach: true` - then it is yours to
+manage. This changed in 0.22.0; before it, every spawned child outlived the
+program by default.

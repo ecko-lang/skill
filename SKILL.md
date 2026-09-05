@@ -264,7 +264,7 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
 `eprint` or `hash`. `reference/builtins.md` is the probed list of all 102, with
 replacements for the names that feel like they should exist.
 
-`reference/gotchas.md` has 29 traps with the exact error each produces.
+`reference/gotchas.md` has 30 traps with the exact error each produces.
 
 ## Reference files
 
@@ -275,5 +275,5 @@ replacements for the names that feel like they should exist.
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
 - `reference/stdlib.md` - all 40 `std.*` modules and every builtin, indexed
-- `reference/gotchas.md` - 29 traps, with the error each produces
+- `reference/gotchas.md` - 30 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs for common tasks
