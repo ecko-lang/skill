@@ -91,17 +91,17 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.fmt`** (6) - `fixed`, `format`, `pad_left`, `pad_right`, `repeat`, `truncate`
 
-**`std.fs`** (21) - `append`, `basename`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `join`, `list_dir`, `match`, `mkdir`, `read`, `read_bytes`, `remove`, `rename`, `temp_dir`, `temp_file`, `walk`, `write`
+**`std.fs`** (27) - `append`, `basename`, `canonical`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `modified`, `open`, `read`, `read_bytes`, `remove`, `rename`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
 
 **`std.hash`** (8) - `hmac_sha256`, `hmac_sha256_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `verify`
 
-**`std.http`** (12) - `delete`, `get`, `html`, `json`, `not_found`, `patch`, `post`, `put`, `response`, `serve`, `stop`, `text`
+**`std.http`** (13) - `delete`, `get`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
 
 **`std.humanize`** (5) - `duration`, `ordinal`, `plural`, `relative`, `size`
 
 **`std.image`** (10) - `crop`, `decode`, `dimensions`, `encode`, `free`, `height`, `load`, `resize`, `save`, `width`
 
-**`std.io`** (3) - `print`, `read_all`, `read_line`
+**`std.io`** (14) - `close`, `lines`, `print`, `read`, `read_all`, `read_exact`, `read_line`, `read_text`, `read_until`, `stderr`, `stdin`, `stdout`, `timeout`, `write`
 
 **`std.json`** (4) - `decode`, `encode`, `read`, `write`
 
@@ -111,11 +111,11 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.math`** (41) - `acos`, `acosh`, `asin`, `asinh`, `atan`, `atan2`, `atanh`, `cbrt`, `clamp`, `copysign`, `cos`, `cosh`, `degrees`, `e`, `exp`, `factorial`, `fmod`, `gcd`, `hypot`, `inf`, `isclose`, `isfinite`, `isinf`, `isnan`, `lcm`, `ln`, `log`, `log10`, `log2`, `nan`, `pi`, `pow`, `radians`, `sign`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `tau`, `trunc`
 
-**`std.net`** (10) - `close`, `connect`, `connect_tls`, `lookup`, `recv`, `recv_exact`, `recv_text`, `recv_until`, `send`, `starttls`
+**`std.net`** (8) - `accept`, `connect`, `connect_tls`, `listen`, `lookup`, `port`, `starttls`, `stop`
 
-**`std.os`** (11) - `arch`, `args`, `cwd`, `env`, `env_or`, `exec`, `exit`, `family`, `platform`, `script`, `set_env`
+**`std.os`** (14) - `arch`, `args`, `cpu_count`, `cwd`, `env`, `env_or`, `exec`, `exit`, `family`, `hostname`, `pid`, `platform`, `script`, `set_env`
 
-**`std.proc`** (8) - `close_stdin`, `kill`, `pid`, `read_line`, `run`, `spawn`, `wait`, `write`
+**`std.proc`** (8) - `kill`, `pid`, `run`, `spawn`, `stderr`, `stdin`, `stdout`, `wait`
 
 **`std.rag`** (4) - `answer`, `chunk`, `index`, `retrieve`
 
@@ -159,9 +159,17 @@ result surprises people.
   `== null`.
 - **`std.time`** - `now()` is milliseconds since the epoch, `monotonic()` is
   seconds since an arbitrary start. Two clocks, two units.
-- **`std.http`** - `serve` binds `0.0.0.0` unless you pass `host:`. A streaming
+- **`std.http`** - `serve` binds `0.0.0.0` unless you pass `host:`. `serve(0,
+  handler)` asks the operating system for a free port, and `http.port()` reads
+  back which one it chose, from a handler or a task spawned before `serve`. A streaming
   response no longer occupies a handler slot, and is bounded separately by
   `ECKO_MAX_STREAMS` (default 1024).
+- **`std.net`** - client *and* server. `listen` answers a listener, and
+  `accept` answers a connection stream, or `null` when nothing arrived before
+  its deadline. A listener is not a stream: reading it yields connections, not
+  bytes. `starttls` returns the upgraded stream (`c = net.starttls(c)`) and
+  refuses an accepted connection, since the accepting side presents a
+  certificate where `starttls` verifies one.
 - **`std.ws`** - a server-side upgrade must be same-origin unless you list
   `origins:` on `http.serve`.
 - **`std.sql`** - `exec`, `query` and `query_one` take an optional third

@@ -66,11 +66,13 @@ fn box(w, h, fill = "-") = fill * (w * h)    # default parameter
 box(2, h: 3)                                  # named argument
 
 # Control flow - all of these are expressions
+mut count = 2
 status = if count > 0 { "some" } else { "none" }
 unless count > 0 { print("empty") }          # negated if; good as a guard
 for i in 0..3 { print(i) }                   # 0..3 exclusive, 0..=3 inclusive
 for (k, v) in { a: 1, b: 2 } { print(k) }    # maps iterate sorted, as [k, v]
 for (i, x) in enumerate(["a", "b"]) { print(string(i) + x) }
+while count > 0 { count = count - 1 }        # `break` and `continue` both work
 
 # Pipelines - the idiomatic way to express a transformation
 result = [3, 1, 2]
@@ -176,11 +178,18 @@ try {
 Use `get(e, "kind")`, never `e.kind` - `get` is total, so the same match also
 handles plain-string errors (their `kind` is `null`).
 
-Stdlib kinds: `parse`, `fs`, `net`, `sql`, `closed`, `budget`, `capability`,
-`cancelled`, `assert`.
+Stdlib kinds: `ai`, `assert`, `budget`, `cancelled`, `capability`, `closed`,
+`fs`, `io`, `limit`, `net`, `parse`, `sql`, `timeout`.
+
+`io` is a stream that failed or was closed under you. `limit` is a configured
+ceiling refusing to allocate, and carries `limit` (bytes) and `env` (the
+variable that raises it), so you can report both without scraping the message.
 
 For your own recoverable failures, throw the same shape:
 `error({ kind: "not_found", message: "no user 0" })`.
+
+`try` takes an optional `finally` block, which runs whether or not the body
+raised. Use it to release something you acquired, not to hide a failure.
 
 `Ok`/`Err` and `Some`/`None` exist as ordinary data types for your own
 modelling. **They are not the error channel** - nothing in the stdlib returns
@@ -203,6 +212,41 @@ print(reveal(key))                  # hunter2 - the only way out
 Use `decimal` for money, always. Mixing `decimal` with `float` is a hard error
 by design. `secret()` redacts through every stringifying sink, so `grep reveal`
 audits every exposure point.
+
+## Streams
+
+A file, a socket, a child's pipe, an HTTP body fetched with `stream: true` and
+`io.stdin` are all one `stream` value, read through one verb set in `std.io`.
+There is no per-module read verb: `net.recv` and `proc.read_line` were removed
+in 0.23.
+
+```ecko
+import std.fs
+import std.io
+
+fs.write("notes.txt", "alpha\nbeta\n")
+
+s = fs.open("notes.txt")
+print(io.read_line(s))
+io.close(s)
+
+# `for` reads a piece at a time and nothing accumulates, so input larger than
+# memory is fine as long as you never ask for all of it at once.
+for line in io.lines(fs.open("notes.txt")) {
+    print(line)
+}
+```
+
+The verbs are `read`, `read_text`, `read_line`, `read_exact`, `read_until`,
+`write`, `timeout`, `close` and `lines`.
+
+**Ending matters.** A read that reaches the end with nothing pending returns
+`null`. One that reaches the end *mid-answer* raises instead of answering
+short: `read_exact` below its count, `read_until` with no delimiter, a
+character cut in half. So `null` means clean end, and an error means truncated.
+
+`io.timeout(s, ms)` sets a deadline and raises when it passes. `ECKO_MAX_ALLOC`
+bounds each piece rather than the whole stream.
 
 ## Concurrency
 

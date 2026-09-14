@@ -65,6 +65,11 @@ print(xs[1..3])   # [2, 3]
 `int` is i64 with **checked** arithmetic - overflow raises, never wraps.
 `float` is IEEE-754. `decimal` (`19.99m`) is exact base-10 for money.
 
+A float literal may carry an exponent: `1e3`, `2.5e-9`, `6.022e23`. An exponent
+always produces a `float`, so `1e3` is `1000.0` and not the integer `1000`. At
+least one digit must follow the `e` and its optional sign, which is what keeps
+`e` usable as an ordinary name.
+
 ```ecko
 print(1 == 1.0)              # true - numeric cross-type equality
 print(approx(0.1 + 0.2, 0.3))  # true - float equality is exact, so use approx
@@ -153,6 +158,17 @@ Know what that costs: they are **probabilistic, not proof**; they always pass in
 mock mode; each attempt is a **paid API call**; and the checked value is **sent
 to your provider**, so never put secrets or PII behind one. Prefer boolean
 contracts wherever the property is expressible in code.
+
+## Bitwise
+
+Bitwise operators are **words**, not symbols: `band`, `bor`, `bxor`, `bnot`,
+`shl`, `shr`. Writing `a & b` or `a << 1` is a parse error.
+
+```ecko
+print(6 band 3)        # 2
+print(6 bor 3)         # 7
+print(1 shl 4)         # 16
+```
 
 ## Bytes
 
