@@ -33,7 +33,7 @@ command turns up. Nothing to configure.
 | file | what it holds |
 |---|---|
 | `SKILL.md` | the entry point: mental model, syntax, AI primitives, the five mistakes a model makes first |
-| `reference/builtins.md` | all 102 globals, probed against the runtime, and the names that do not exist |
+| `reference/builtins.md` | all 107 globals, probed against the runtime, and the names that do not exist |
 | `reference/language.md` | strings, slicing, templates, contracts, modules, concurrency, the CLI |
 | `reference/ai.md` | typed output and coercion, retries, tool calling, sessions, budgets, tracing |
 | `reference/stdlib.md` | 40 `std.*` modules and 364 exports, indexed |

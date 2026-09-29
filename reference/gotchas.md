@@ -82,12 +82,13 @@ Slices are the exception: they clamp rather than raise. `"hello"[2..99]` is
 
 ## 5. Caught errors: use `get(e, "kind")`, never `e.kind`
 
-A caught error may be a `{ kind, message }` map **or** a plain string (a
-panic). `e.kind` raises on the string case. `get` is total and returns `null`,
-so one `match` handles both:
+Every error the runtime throws is a `{ kind, message }` map; a programmer
+mistake is `kind: "bug"`. But `error(v)` throws `v` exactly as given, so a caught
+value can still be a plain string, and `e.kind` raises on that. `get` is total
+and returns `null`, so one `match` handles both:
 
 ```ecko
-try { error("plain string panic") } catch (e) {
+try { error("a thrown string") } catch (e) {
     print(match get(e, "kind") {
         "parse" => "a parse failure"
         _       => "something else"

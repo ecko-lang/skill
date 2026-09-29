@@ -236,8 +236,8 @@ spec = {
 }
 
 r = cli.parse(spec, ["-n", "ada", "-c", "2", "--loud"])
-msg = "hello, " + r.options.name
-if r.options.loud { msg = upper(msg) }
+plain = "hello, " + r.options.name
+msg = if r.options.loud { upper(plain) } else { plain }
 for i in range(0, r.options.count) { print(msg) }
 if r.help { print(cli.help(spec)) }
 ```

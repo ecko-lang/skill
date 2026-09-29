@@ -39,33 +39,34 @@ other top-level key becomes a member, keeping its JSON type.
 | `std.dns` | DNS lookups | 3 |
 | `std.encoding` | base64, hex, url encoding | 8 |
 | `std.fmt` | number/string formatting, padding, truncation | 6 |
-| `std.fs` | filesystem: read, write, glob, walk, temp files | 21 |
-| `std.hash` | sha256, md5, hmac, bcrypt-style helpers | 8 |
-| `std.http` | HTTP client (all verbs) + server (serve/stop) + responses | 12 |
+| `std.fs` | filesystem: read, write, glob, walk, temp files | 29 |
+| `std.hash` | sha256, md5, hmac, bcrypt-style helpers | 9 |
+| `std.http` | HTTP client (all verbs) + server (serve/stop) + responses | 13 |
 | `std.humanize` | human-readable sizes, durations, relative times | 5 |
 | `std.image` | load, resize, crop - feeds `ai ... on img` | 10 |
-| `std.io` | stdin/stdout: read_line, read_all, print | 3 |
+| `std.io` | stdin/stdout: read_line, read_all, print | 14 |
 | `std.json` | encode/decode, read/write files | 4 |
-| `std.llm` | low-level chat access under the `ai` keyword | 1 |
+| `std.llm` | low-level chat access under the `ai` keyword | 2 |
 | `std.log` | levelled logging, sinks, rotation, JSON format | 8 |
 | `std.math` | trig, log, statistics, constants | 41 |
-| `std.net` | TCP/UDP sockets, TLS | 10 |
-| `std.os` | env, args, exec, platform, cwd | 11 |
+| `std.net` | TCP/UDP sockets, TLS | 14 |
+| `std.os` | env, args, exec, platform, cwd | 15 |
 | `std.proc` | child processes with pipes | 8 |
 | `std.rag` | chunk, index, retrieve, answer - retrieval in four calls | 4 |
 | `std.random` | seeded RNG, choice, shuffle, secure bytes | 7 |
 | `std.re` | regex: test, find, captures, replace, split | 8 |
+| `std.serial` | serial ports: open, drain, flush, DTR/RTS control, port listing | 6 |
 | `std.signal` | OS signal handlers | 5 |
-| `std.sql` | SQLite/Postgres/MySQL with transactions | 9 |
-| `std.str` | the full string surface (50 functions) | 50 |
+| `std.sql` | embedded SQLite with transactions (Postgres/MySQL are the `postgres`/`mysql` packages) | 9 |
+| `std.str` | the full string surface (50 functions) | 52 |
 | `std.term` | terminal UI: colours, cursor, raw mode, frames | 49 |
 | `std.test` | test cases and assertions for `ecko test` | 6 |
-| `std.time` | clock, format, parse, monotonic | 6 |
+| `std.time` | clock, format, parse, monotonic | 7 |
 | `std.toml` | TOML parse/stringify | 4 |
 | `std.uuid` | v4 (random) and v7 (time-ordered) ids | 2 |
 | `std.watch` | filesystem change events | 4 |
 | `std.web` | router: get/post/put/delete/static | 8 |
-| `std.ws` | WebSocket client and server | 4 |
+| `std.ws` | WebSocket client and server | 5 |
 | `std.yaml` | YAML parse/stringify | 4 |
 | `std.zlib` | gzip/deflate compress and decompress | 4 |
 
@@ -91,9 +92,9 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.fmt`** (6) - `fixed`, `format`, `pad_left`, `pad_right`, `repeat`, `truncate`
 
-**`std.fs`** (27) - `append`, `basename`, `canonical`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `modified`, `open`, `read`, `read_bytes`, `remove`, `rename`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
+**`std.fs`** (29) - `append`, `basename`, `canonical`, `chmod`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `read`, `read_bytes`, `remove`, `rename`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
 
-**`std.hash`** (8) - `hmac_sha256`, `hmac_sha256_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `verify`
+**`std.hash`** (9) - `constant_eq`, `hmac_sha256`, `hmac_sha256_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `verify`
 
 **`std.http`** (13) - `delete`, `get`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
 
@@ -105,15 +106,15 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.json`** (4) - `decode`, `encode`, `read`, `write`
 
-**`std.llm`** (1) - `chat`
+**`std.llm`** (2) - `chat`, `is_mock`
 
 **`std.log`** (8) - `configure`, `debug`, `error`, `info`, `reset`, `to_file`, `to_stderr`, `warn`
 
 **`std.math`** (41) - `acos`, `acosh`, `asin`, `asinh`, `atan`, `atan2`, `atanh`, `cbrt`, `clamp`, `copysign`, `cos`, `cosh`, `degrees`, `e`, `exp`, `factorial`, `fmod`, `gcd`, `hypot`, `inf`, `isclose`, `isfinite`, `isinf`, `isnan`, `lcm`, `ln`, `log`, `log10`, `log2`, `nan`, `pi`, `pow`, `radians`, `sign`, `sin`, `sinh`, `sqrt`, `tan`, `tanh`, `tau`, `trunc`
 
-**`std.net`** (8) - `accept`, `connect`, `connect_tls`, `listen`, `lookup`, `port`, `starttls`, `stop`
+**`std.net`** (14) - `accept`, `broadcast`, `connect`, `connect_tls`, `listen`, `lookup`, `port`, `recv_from`, `send_to`, `starttls`, `stop`, `timeout`, `udp_bind`, `udp_close`
 
-**`std.os`** (14) - `arch`, `args`, `cpu_count`, `cwd`, `env`, `env_or`, `exec`, `exit`, `family`, `hostname`, `pid`, `platform`, `script`, `set_env`
+**`std.os`** (15) - `arch`, `args`, `cpu_count`, `cwd`, `env`, `env_or`, `exec`, `exit`, `family`, `hostname`, `pid`, `platform`, `script`, `set_env`, `unset_env`
 
 **`std.proc`** (8) - `kill`, `pid`, `run`, `spawn`, `stderr`, `stdin`, `stdout`, `wait`
 
@@ -123,17 +124,19 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.re`** (8) - `captures`, `captures_all`, `find`, `find_all`, `replace`, `replace_first`, `split`, `test`
 
+**`std.serial`** (6) - `drain`, `dtr`, `flush`, `open`, `ports`, `rts`
+
 **`std.signal`** (5) - `close`, `names`, `next`, `on`, `raise`
 
 **`std.sql`** (9) - `begin`, `close`, `commit`, `exec`, `open`, `query`, `query_one`, `rollback`, `transaction`
 
-**`std.str`** (50) - `capitalize`, `center`, `char_at`, `chars`, `chr`, `contains`, `count`, `ends_with`, `eq_ignore_case`, `from`, `from_utf8`, `from_utf8_lossy`, `index_of`, `is_alnum`, `is_alpha`, `is_ascii`, `is_blank`, `is_digit`, `is_empty`, `is_lower`, `is_space`, `is_upper`, `join`, `last_index_of`, `len`, `lines`, `lower`, `ord`, `pad_end`, `pad_start`, `partition`, `repeat`, `replace`, `replace_first`, `reverse`, `rpartition`, `rsplit`, `split`, `split_whitespace`, `starts_with`, `substring`, `swapcase`, `title`, `trim`, `trim_end`, `trim_prefix`, `trim_start`, `trim_suffix`, `upper`, `zfill`
+**`std.str`** (52) - `capitalize`, `category`, `center`, `char_at`, `chars`, `chr`, `contains`, `count`, `ends_with`, `eq_ignore_case`, `from`, `from_utf8`, `from_utf8_lossy`, `index_of`, `is_alnum`, `is_alpha`, `is_ascii`, `is_blank`, `is_digit`, `is_empty`, `is_lower`, `is_space`, `is_upper`, `join`, `last_index_of`, `len`, `lines`, `lower`, `normalize`, `ord`, `pad_end`, `pad_start`, `partition`, `repeat`, `replace`, `replace_first`, `reverse`, `rpartition`, `rsplit`, `split`, `split_whitespace`, `starts_with`, `substring`, `swapcase`, `title`, `trim`, `trim_end`, `trim_prefix`, `trim_start`, `trim_suffix`, `upper`, `zfill`
 
 **`std.term`** (49) - `alt_screen`, `black`, `blink`, `blue`, `bold`, `bright_black`, `bright_blue`, `bright_cyan`, `bright_green`, `bright_magenta`, `bright_red`, `bright_white`, `bright_yellow`, `clear`, `clear_down`, `clear_line`, `color`, `cyan`, `dim`, `down`, `goto`, `gray`, `green`, `grey`, `hide_cursor`, `is_tty`, `italic`, `left`, `link`, `magenta`, `poll`, `raw_mode`, `read_key`, `red`, `restore_cursor`, `reverse`, `rgb`, `right`, `save_cursor`, `show_cursor`, `size`, `strikethrough`, `strip`, `style`, `underline`, `up`, `white`, `width`, `yellow`
 
 **`std.test`** (6) - `case`, `eq`, `err`, `fail`, `group`, `ok`
 
-**`std.time`** (6) - `format`, `monotonic`, `now`, `now_iso`, `parse`, `parse_format`
+**`std.time`** (7) - `format`, `format_local`, `monotonic`, `now`, `now_iso`, `parse`, `parse_format`
 
 **`std.toml`** (4) - `parse`, `read`, `stringify`, `write`
 
@@ -143,7 +146,7 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.web`** (8) - `delete`, `get`, `head`, `patch`, `post`, `put`, `router`, `static`
 
-**`std.ws`** (4) - `close`, `connect`, `recv`, `send`
+**`std.ws`** (5) - `close`, `connect`, `recv`, `request`, `send`
 
 **`std.yaml`** (4) - `parse`, `read`, `stringify`, `write`
 

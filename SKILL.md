@@ -33,8 +33,12 @@ error-severity finding **stops the program before it starts**. Treat a clean
 
 ## The mental model in six points
 
-1. **Immutable by default.** `let x = 1` cannot be reassigned. `mut x = 1` can.
-   A bare `x = 1` defines a mutable binding.
+1. **Immutable unless `mut`.** A bare `x = 1` is immutable, exactly like
+   `let x = 1`; only `mut x = 1` can be reassigned. That covers path writes
+   (`m.k = v`, `xs[0] = v` need a `mut` root), parameters and loop variables
+   (`mut n = n` to get a changeable copy), and a function writing a top-level
+   name (it must be `mut`). `ecko check` refuses a reassignment
+   (`immutable-reassign`) before the program runs.
 2. **A newline ends a statement.** No semicolons. Lines continue only after a
    trailing binary operator, before a leading `|>` or `.`, or inside `(...)`/`[...]`.
 3. **Access is strict.** `m.missing` and `xs[99]` are errors. `get(m, k)` is the
@@ -42,8 +46,9 @@ error-severity finding **stops the program before it starts**. Treat a clean
 4. **Everything runs offline.** With no `ECKO_API_KEY`, `ai` returns
    deterministic, schema-valid mock values. Never write a program that needs a
    key to be testable.
-5. **One error dialect.** Absence returns `null`; operational failures throw
-   `{ kind, message }` maps; programmer mistakes throw prose strings.
+5. **One error dialect.** Absence returns `null`; every error the runtime
+   throws is a `{ kind, message }` map. Operational failures have their own
+   kind (`net`, `fs`, `parse`, ...); programmer mistakes are `kind: "bug"`.
 6. **Blocks are expressions.** The trailing expression is the value; `return` is
    optional.
 
@@ -53,7 +58,7 @@ error-severity finding **stops the program before it starts**. Treat a clean
 # Bindings
 let PI = 3.14159            # immutable
 mut count = 0               # mutable
-name = "Ecko"               # bare assignment: also mutable
+name = "Ecko"               # bare assignment: immutable, like let
 let (a, b) = [1, 2]         # destructuring; strict on length
 
 # Functions - `fn(x)` is the canonical lambda. `|x|` is DEPRECATED.
@@ -175,11 +180,14 @@ try {
 }
 ```
 
-Use `get(e, "kind")`, never `e.kind` - `get` is total, so the same match also
-handles plain-string errors (their `kind` is `null`).
+Use `get(e, "kind")` rather than `e.kind`. Every error the runtime throws has a
+`kind`, but a value thrown with `error("...")` is caught exactly as thrown, and
+`get` is total, so the same match handles a thrown string (its `kind` is `null`).
 
-Stdlib kinds: `ai`, `assert`, `budget`, `cancelled`, `capability`, `closed`,
-`fs`, `io`, `limit`, `net`, `parse`, `sql`, `timeout`.
+Kinds: `ai`, `archive`, `assert`, `budget`, `bug`, `cancelled`, `capability`,
+`closed`, `fs`, `io`, `limit`, `net`, `os`, `parse`, `proc`, `signal`, `sql`,
+`timeout`, `watch`. `bug` is a programmer mistake (wrong type or arity, an index
+out of bounds, a missing field): fix the code rather than dispatch on it.
 
 `io` is a stream that failed or was closed under you. `limit` is a configured
 ceiling refusing to allocate, and carries `limit` (bytes) and `env` (the
@@ -300,19 +308,25 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
    segment of its path, and one called `string` would displace the `string()`
    converter for the whole file. `import std.string` is an error naming the fix.
 5. **Writing `|x| ...` for a lambda.** Deprecated since 0.9.4. Use `fn(x) ...`.
-6. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")` - a caught
-   error is sometimes a plain string, and `get` is total.
+6. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")` - a value
+   thrown with `error("...")` is caught as that string, and `get` is total.
 7. **Assuming `m.missing` returns null.** It raises. Use `get(m, "missing")`.
+8. **Reassigning a bare binding.** `total = 0` then `total = total + x` is an
+   error: declare it `mut total = 0`. `ecko fix --migrate --only=mut` adds the
+   `mut` where each reassigned binding is declared.
+9. **Integer division.** `/` always divides (`7 / 2` is `3.5`); `//` is floor
+   division (`7 // 2` is `3`) and `%` floors with it (`-7 % 2` is `1`). `+`
+   joins strings only with strings: `"n=" + string(5)`, or interpolate.
 
-**Do not guess builtin names.** There is no `min_by`, `fold`, `append`, `merge`,
-`eprint` or `hash`. `reference/builtins.md` is the probed list of all 102, with
+**Do not guess builtin names.** There is no `min_by`, `fold`, `append`,
+`eprint` or `hash`. `reference/builtins.md` is the probed list of all 107, with
 replacements for the names that feel like they should exist.
 
 `reference/gotchas.md` has 30 traps with the exact error each produces.
 
 ## Reference files
 
-- `reference/builtins.md` - all 102 globals, probed against the runtime, plus
+- `reference/builtins.md` - all 107 globals, probed against the runtime, plus
   the names that do not exist and what to use instead
 - `reference/language.md` - complete syntax: strings, bytes, slicing, modules,
   packages, channels, templates, contracts

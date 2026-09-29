@@ -3,19 +3,19 @@
 Global functions. No import needed. **This list was produced by probing each
 name against the runtime**, not by reading the reference, so it is what exists.
 
-102 builtins, plus two special forms.
+107 builtins, plus two special forms.
 
-**Collections** (43) - `all`, `any`, `chunk`, `contains`, `count`, `drop`, `empty_map`, `enumerate`, `filter`, `find`, `first`, `flatten`, `frequencies`, `get`, `group_by`, `has`, `index_of`, `insert`, `keys`, `last`, `len`, `map`, `max`, `min`, `partition`, `pmap`, `pop`, `push`, `range`, `reduce`, `remove`, `reverse`, `set`, `slice`, `sort`, `sort_by`, `sort_with`, `sum`, `take`, `unique`, `values`, `window`, `zip`
+**Collections** (45) - `all`, `any`, `chunk`, `contains`, `count`, `drop`, `empty_map`, `enumerate`, `filter`, `find`, `first`, `flatten`, `frequencies`, `get`, `group_by`, `has`, `index_of`, `insert`, `keys`, `last`, `len`, `list`, `map`, `max`, `merge`, `min`, `partition`, `pmap`, `pop`, `push`, `range`, `reduce`, `remove`, `reverse`, `set`, `slice`, `sort`, `sort_by`, `sort_with`, `sum`, `take`, `unique`, `values`, `window`, `zip`
 
 **Strings** (11) - `chars`, `ends_with`, `escape_html`, `join`, `lines`, `lower`, `replace`, `split`, `starts_with`, `trim`, `upper`
 
 **Numbers and math** (7) - `abs`, `approx`, `ceil`, `floor`, `pow`, `round`, `sqrt`
 
-**Types and conversion** (11) - `bool`, `decimal`, `float`, `int`, `is_list`, `is_map`, `is_null`, `is_number`, `is_string`, `string`, `type_of`
+**Types and conversion** (13) - `bool`, `bytes`, `decimal`, `float`, `int`, `is_list`, `is_map`, `is_null`, `is_number`, `is_string`, `string`, `type_name`, `type_of`
 
 **JSON** (2) - `json_decode`, `json_encode`
 
-**AI** (7) - `cosine`, `cost`, `embed`, `embed_all`, `retry`, `session`, `tokens`
+**AI** (8) - `cosine`, `cost`, `embed`, `embed_all`, `model`, `retry`, `session`, `tokens`
 
 **Secrets** (3) - `is_secret`, `reveal`, `secret`
 
@@ -46,7 +46,6 @@ round trip.
 | `min_by(xs, key)` | | `first(sort_by(xs, key))` |
 | `fold(xs, f, init)` | | `reduce(xs, f, init)` |
 | `append(xs, v)` | | `push(xs, v)` |
-| `merge(a, b)` | | `for (k, v) in b { m = insert(m, k, v) }` |
 | `hash(s)` | | `import std.hash`, then `hash.sha256(s)` |
 | `eprint(s)` | | `import std.log`, then `log.error(s)` - that writes to stderr |
 | `map_get` / `dict` / `list_append` | | `get`, `{}` literals, `push` |

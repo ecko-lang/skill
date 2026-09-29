@@ -73,7 +73,10 @@ least one digit must follow the `e` and its optional sign, which is what keeps
 ```ecko
 print(1 == 1.0)              # true - numeric cross-type equality
 print(approx(0.1 + 0.2, 0.3))  # true - float equality is exact, so use approx
-print(int(7 / 2))            # 3
+print(7 / 2)                 # 3.5 - `/` always divides
+print(7 // 2)                # 3 - floor division
+print(-7 % 2)                # 1 - `%` floors, like `//`
+print("n=" + string(5))      # `+` joins strings only with strings
 print(19.99m + 0.01m)        # 20.00 - scale preserved, cents never dropped
 ```
 
