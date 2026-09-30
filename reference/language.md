@@ -41,6 +41,19 @@ a whitespace-only final line, and strip the common indentation of what remains.
 
 Strings are UTF-8; `len`, indexing and slicing count **characters**, not bytes.
 
+`\u{...}` is a Unicode escape taking 1-6 hex digits: `"caf\u{e9}"` is `café`.
+An escape that is not a character is an error.
+
+A hole holds **one** expression: `"{a b}"` is a parse error. A hole holding only
+a number (`"{3}"`) is refused by `ecko check`, since it is almost always a regex
+quantifier or a literal brace that wanted a raw string.
+
+```ecko
+print("caf\u{e9}")        # café
+print(r"^[A-Z]{3}$")      # a raw string keeps the braces
+print("\{3}")             # {3} - or escape the brace
+```
+
 ## Slicing
 
 Strings, lists and bytes all slice. Slices are total - out-of-range bounds
@@ -78,7 +91,13 @@ print(7 // 2)                # 3 - floor division
 print(-7 % 2)                # 1 - `%` floors, like `//`
 print("n=" + string(5))      # `+` joins strings only with strings
 print(19.99m + 0.01m)        # 20.00 - scale preserved, cents never dropped
+print(round(12.345m, 2))     # 12.35 - a decimal stays a decimal at that scale
+print(round(12.5, 0, "half_even"))   # 12
 ```
+
+`round(x, places, mode?)` rounds halves away from zero unless `mode` says
+otherwise: `half_up`, `half_even`, `half_down`, `up`, `down`, `ceiling`,
+`floor`. One-argument `round` is unchanged.
 
 ## Pattern matching
 
@@ -102,6 +121,10 @@ print(role({ role: "admin", active: false }))
 
 Bindings are scoped to the arm. Guards use `when`: `n when n > 0 => ...`.
 `match` **tests** rather than accesses, so a non-matching pattern never errors.
+When **no** arm matches, the error names the value -
+`Non-exhaustive match: no pattern matched "io"` - and inside a `catch (e)`
+block it also names the error being handled, `(while handling: disk full)`.
+End a `match` on `get(e, "kind")` with `_ => error(e)` so nothing is lost.
 
 A keyword key in a pattern needs the explicit form: `{ type: t }`, not `{ type }`.
 
@@ -157,8 +180,8 @@ print(increment(1))
 with `result` also in scope. A false condition raises.
 
 String contracts (`@ensures("result is a valid email")`) are judged by the LLM.
-Know what that costs: they are **probabilistic, not proof**; they always pass in
-mock mode; each attempt is a **paid API call**; and the checked value is **sent
+Know what that costs: they are **probabilistic, not proof**; offline they pass
+unchecked (stderr names each one); each attempt is a **paid API call**; and the checked value is **sent
 to your provider**, so never put secrets or PII behind one. Prefer boolean
 contracts wherever the property is expressible in code.
 
@@ -231,7 +254,23 @@ for j in jobs { print(j) }   # drains until closed
 - `channel(n)` is bounded and gives real backpressure - `send` blocks when full.
 - `recv` blocks; `try_recv` does not; `select([a, b])` fans in.
 - `cancel(task)` is cooperative; awaiting a cancelled task raises
-  `{ kind: "cancelled" }`.
+  `{ kind: "cancelled" }`. It ends a `sleep` or a channel wait at once.
+- `with_timeout(ms, f)` returns `f()`, or throws `{ kind: "timeout", ms }` once
+  `f` has run `ms` **milliseconds**. `f` is stopped, not abandoned; a call
+  blocked inside a library (a slow query) finishes first.
+
+```ecko
+slow = fn() {
+    sleep(5)
+    "done"
+}
+r = try {
+    with_timeout(50, slow)
+} catch (e) {
+    get(e, "kind")
+}
+print(r)                     # timeout
+```
 - At most `ECKO_MAX_TASKS` tasks run at once (default 256); a task parked on
   `await` frees its slot.
 
@@ -242,6 +281,10 @@ Env vars, all with sensible defaults: `ECKO_MAX_DEPTH` (recursion, 2000),
 `ECKO_MAX_PARALLEL`, `ECKO_MAX_TASKS`, `ECKO_HTTP_WORKERS`.
 
 ## CLI
+
+Ecko's own flags go **before** the file; everything after it is the program's
+(`os.args()`). `ecko --provider ollama --model llama3.2 app.ecko --port 8080`.
+There is no `--key` flag: set `ECKO_API_KEY`.
 
 ```
 ecko file.ecko              run

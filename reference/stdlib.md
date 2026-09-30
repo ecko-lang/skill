@@ -1,13 +1,13 @@
 # Standard library index
 
-39 modules with fixed exports, 364 functions, plus `std.defaults` (below).
+40 modules with fixed exports, 407 functions, plus `std.defaults` (below).
 `import std.x` binds `x`.
 
 Everything here is in the single binary - there is nothing to install, and no
 package manager step to reach any of it. `ecko doc <file>` generates the same
 kind of reference for your own code from its `##` comments.
 
-## `std.defaults` - the 40th module
+## `std.defaults` - the 41st module
 
 It has no fixed exports because its members come from the `ecko.json` sitting
 next to the file being run, which is loaded automatically before the program
@@ -80,7 +80,7 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.config`** (1) - `load`
 
-**`std.csv`** (4) - `parse`, `read`, `stringify`, `write`
+**`std.csv`** (5) - `each`, `parse`, `read`, `stringify`, `write`
 
 **`std.db`** (7) - `add`, `clear`, `count`, `load`, `remove`, `save`, `search`
 
@@ -102,7 +102,7 @@ other top-level key becomes a member, keeping its JSON type.
 
 **`std.image`** (10) - `crop`, `decode`, `dimensions`, `encode`, `free`, `height`, `load`, `resize`, `save`, `width`
 
-**`std.io`** (14) - `close`, `lines`, `print`, `read`, `read_all`, `read_exact`, `read_line`, `read_text`, `read_until`, `stderr`, `stdin`, `stdout`, `timeout`, `write`
+**`std.io`** (16) - `close`, `lines`, `print`, `read`, `read_all`, `read_exact`, `read_line`, `read_text`, `read_until`, `seek`, `stderr`, `stdin`, `stdout`, `tell`, `timeout`, `write`
 
 **`std.json`** (4) - `decode`, `encode`, `read`, `write`
 
@@ -157,6 +157,26 @@ other top-level key becomes a member, keeping its JSON type.
 The export list above is complete; these are the places where the shape of a
 result surprises people.
 
+```ecko
+import std.json
+import std.csv
+import std.fs
+import std.io
+
+print(json.decode(r"""{"fee": 0.30}""", { decimal: true }).fee)   # 0.30
+
+fs.write("rows.csv", "id,qty\n1,5\n2\n3,7\n")
+res = csv.each("rows.csv", fn(row) row.qty, { on_error: fn(e) e.line })
+print([res.rows, res.errors])                  # [2, 1]
+
+fs.write("log.txt", "a\nbb\nccc\n")
+s = fs.open("log.txt")
+first = io.read_line(s)
+mark = io.tell(s)                              # 2 - just past "a\n"
+io.seek(s, mark)
+print(io.read_line(s))                         # bb
+```
+
 - **`std.re`** - `find` and `captures` answer a miss with `null`; `find_all` and
   `captures_all` answer it with an empty list. Guard the singular with
   `== null`.
@@ -186,5 +206,18 @@ result surprises people.
   milliseconds; `signal.next` waits, so you will not notice.
 - **`std.term`** - `raw_mode(true)` is undone on exit, on error, **and** when a
   signal kills the program, so a TUI cannot strand your shell without echo.
+- **`std.json`** - numbers that are not integers decode as floats unless you
+  pass `{ decimal: true }`, which reads each one as an exact decimal - what a
+  money field needs. Encoding a value with no JSON form (a function, task,
+  stream, range) throws `bug`; a record gains a `__type__` key, so build a
+  plain map for an API payload.
+- **`std.csv`** - `read` loads the whole file (at most 256 MiB). `each(path or
+  stream, fn(row), { on_error })` hands over one row map at a time with flat
+  memory; a bad row goes to `on_error` as `{ kind: "parse", line, raw, message }`
+  and the run carries on. It returns `{ rows, errors }`.
+- **`std.io`** - `tell(s)` is the byte offset of the next byte you will read,
+  not counting what was read ahead; `seek(s, offset)` moves there. Store the
+  offset as a checkpoint to resume a large file. Only a file stream has a
+  position.
 - **Every module** rejects extra arguments now, so a stray argument is an error
   rather than being ignored.

@@ -3,7 +3,7 @@
 Global functions. No import needed. **This list was produced by probing each
 name against the runtime**, not by reading the reference, so it is what exists.
 
-107 builtins, plus two special forms.
+108 builtins, plus two special forms.
 
 **Collections** (45) - `all`, `any`, `chunk`, `contains`, `count`, `drop`, `empty_map`, `enumerate`, `filter`, `find`, `first`, `flatten`, `frequencies`, `get`, `group_by`, `has`, `index_of`, `insert`, `keys`, `last`, `len`, `list`, `map`, `max`, `merge`, `min`, `partition`, `pmap`, `pop`, `push`, `range`, `reduce`, `remove`, `reverse`, `set`, `slice`, `sort`, `sort_by`, `sort_with`, `sum`, `take`, `unique`, `values`, `window`, `zip`
 
@@ -23,7 +23,7 @@ name against the runtime**, not by reading the reference, so it is what exists.
 
 **Shared state** (4) - `cell`, `cell_get`, `cell_set`, `cell_update`
 
-**Async and channels** (7) - `cancel`, `channel`, `close`, `recv`, `select`, `send`, `try_recv`
+**Async and channels** (8) - `cancel`, `channel`, `close`, `recv`, `select`, `send`, `try_recv`, `with_timeout`
 
 **I/O and timing** (5) - `print`, `print_no_newline`, `read_file`, `sleep`, `write_file`
 
@@ -57,6 +57,6 @@ feels like a synonym for one already in the list above, it is not there.
 ## Where the rest lives
 
 Anything not in this list is in a `std.*` module and needs an import. See
-`reference/stdlib.md` for all 40 of them. The split is roughly: if it works on
+`reference/stdlib.md` for all 41 of them. The split is roughly: if it works on
 plain data you already have, it is a builtin; if it touches the outside world
 (files, network, time, randomness, crypto, terminals) it is a module.

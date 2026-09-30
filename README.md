@@ -32,11 +32,11 @@ command turns up. Nothing to configure.
 
 | file | what it holds |
 |---|---|
-| `SKILL.md` | the entry point: mental model, syntax, AI primitives, the five mistakes a model makes first |
-| `reference/builtins.md` | all 107 globals, probed against the runtime, and the names that do not exist |
+| `SKILL.md` | the entry point: mental model, syntax, AI primitives, the eight mistakes a model makes first |
+| `reference/builtins.md` | all 108 globals, probed against the runtime, and the names that do not exist |
 | `reference/language.md` | strings, slicing, templates, contracts, modules, concurrency, the CLI |
 | `reference/ai.md` | typed output and coercion, retries, tool calling, sessions, budgets, tracing |
-| `reference/stdlib.md` | 40 `std.*` modules and 364 exports, indexed |
+| `reference/stdlib.md` | 41 `std.*` modules and 407 exports, indexed |
 | `reference/gotchas.md` | 30 traps, each with the exact error it produces |
 | `reference/recipes.md` | 10 complete programs, all of which run offline |
 
@@ -50,7 +50,7 @@ So every fenced block ships only after it has run:
 
 ```bash
 ./verify.sh SKILL.md reference/*.md
-# --- 50/50 blocks verified ---
+# --- 62/62 blocks verified ---
 ```
 
 - ` ```ecko ` blocks must run cleanly, offline, with no API key.

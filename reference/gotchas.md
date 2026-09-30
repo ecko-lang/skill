@@ -59,7 +59,7 @@ They still parse, but `ecko check` warns:
 Write `fn(x) x * 2`. `ecko fmt` rewrites it for you. Same story for `const`,
 which is an alias for `let`:
 
-> `deprecated-syntax: const is deprecated - it is identical to let`
+> ``deprecated-syntax: `const` is deprecated - it is identical to `let` (both are immutable); use `let` (run `ecko fmt` to migrate)``
 
 ## 4. Access is strict; `get` is the nullable one
 
@@ -154,7 +154,7 @@ Deterministic output is the point. Use `sort_by(xs, key)` or
 ```
 list(0..30000000)
 ```
-→ `error: range 0..30000000 is too large to turn into a list (30000000 elements, max 10000000) - iterate it instead`
+→ `error: range 0..30000000 is too large to turn into a list (30000000 elements, max 10000000) - iterate it instead: a `for` loop or a range-aware builtin like `sum` or `count` streams it without building the list`
 
 `for i in 0..30000000` is free. Only building a real list allocates.
 
@@ -250,27 +250,29 @@ now enforced by a test in the compiler, so this is the only one that ever bit.
 
 ## 19. Regex quantifiers need raw strings
 
-This is the worst one on the page, because nothing errors:
+`{3}` is an interpolation hole in a normal string, so `"^[A-Z]{3}$"` is the
+string `^[A-Z]3$` - a pattern that never matches a currency code. Before 0.57
+that ran and silently returned `false`. Now a hole holding only a number is an
+error, and the program does not start:
+
+```
+print(re.test("^[A-Z]{3}$", "ABC"))
+```
+→ ``error[literal-interpolation]: `{3}` in an ordinary string is an interpolation hole, so the string holds `3` rather than `{3}` - for a regex quantifier or a literal brace use a raw string r"..." or escape it as `\{3}` ``
 
 ```ecko
 import std.re
-print(re.test("^[A-Z]{3}$", "ABC"))   # false  - the {3} was interpolated away
-print(re.test(r"^[A-Z]{3}$", "ABC"))  # true   - raw string, pattern intact
+print(re.test(r"^[A-Z]{3}$", "ABC"))  # true - raw string, pattern intact
 ```
 
-`{3}` is an interpolation hole in a normal string, so the pattern that reaches
-the regex engine is not the one you wrote. You get a silently wrong answer, not
-a parse error. **Write every regex as a raw string**, whether or not it
-currently contains braces.
-
-`ecko check` catches this (`regex-interpolation`) and names the fix. It flags
-only an integer hole, since `"^{prefix}$"` is a legitimate dynamic pattern.
+**Write every regex as a raw string**, whether or not it currently contains
+braces. The check catches a number in a hole, not every brace a pattern might
+grow later, and `"^{prefix}$"` is still a legitimate dynamic pattern.
 
 ## 20. Units are seconds
 
-`sleep(1)` sleeps one second. HTTP timeouts are seconds too. Neither is
-documented, and milliseconds is the more common convention elsewhere, so this is
-worth pinning:
+`sleep(1)` sleeps one second, and an HTTP client's `timeout:` is seconds too.
+Milliseconds is the more common convention elsewhere, so this is worth pinning:
 
 ```ecko
 import std.time
@@ -279,8 +281,9 @@ sleep(1)
 print(time.monotonic() - before > 0.9)   # true
 ```
 
-The exceptions are the `std.bg` schedulers, which take milliseconds
-(`bg.after(1000, ...)`), and the `ECKO_*_MS` environment variables.
+The exceptions take milliseconds: the `std.bg` schedulers (`bg.after(1000,
+...)`), `with_timeout(ms, f)`, `io.timeout(s, ms)`, and the `ECKO_*_MS`
+environment variables.
 
 **`time.now()` is the other exception, and it is the one that bites.** It
 returns milliseconds since the epoch, while `time.monotonic()` returns seconds.

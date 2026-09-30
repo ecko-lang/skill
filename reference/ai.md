@@ -57,13 +57,18 @@ With no `ECKO_API_KEY`:
 - a record → a schema-valid value per declared field type
 - `json<List<T>>` → a one-element list
 - a vision call → the prompt plus each image's real dimensions
-- a tool loop → invokes every tool named in the prompt, feeds the prompt as the
-  argument, returns the last tool's result
+- a tool loop → invokes every tool named in the prompt, passing the prompt for
+  each parameter a model would have to supply (one with a default keeps it);
+  untyped returns the last tool's result, typed `ai[T]` returns the mock value
+  for `T`
 
 `ecko test` **strips API keys**, so tests are deterministic, offline and free by
 construction. Design programs so their AI paths are exercised in mock mode.
 
-String contracts always pass in mock mode - they cannot catch anything offline.
+String contracts cannot be judged offline, since there is no model to judge
+them. They pass, and stderr names each one that went unchecked; `ecko test` adds
+`N string contracts not checked offline` to its summary. Do not count them as
+tested.
 
 ## Tools
 
@@ -117,12 +122,42 @@ required.
 is how an MCP server or plugin registry offers tools that have no source-level
 annotation:
 
-```
-{ name: "search", description: "Search the docs", params: ["query"], call: fn(args) ... }
+```ecko
+search = {
+    name: "search",
+    description: "Search the docs",
+    params: ["query", "limit"],
+    call: fn(query, limit) "results for {query}",
+}
+print(ai "search the docs for tokens" using [search])
 ```
 
-`name`, `description` and `call` are required; `params` defaults to `[]`. Bare
-identifiers and spec maps mix in one list.
+`name`, `description` and `call` are required; `params` defaults to `[]`.
+`call` takes **one positional value per entry in `params`**, in order - not a
+single map of arguments. Bare identifiers and spec maps mix in one list.
+
+## Choosing the model per call (`via`)
+
+```ecko
+judge = model("openrouter", "anthropic/claude-sonnet-5", reasoning: "low")
+verdict = ai[Bool] "Is this argument sound?" via judge
+quick = ai "One-word answer: sky colour" via "gpt-4o-mini"
+print(verdict)
+```
+
+`via m` gives one call its own provider and model, and composes with every
+other clause. `m` is a `model(provider, name)` map - provider `openai`,
+`openrouter` or `ollama`, with optional `base_url:`, `key:` and `reasoning:` -
+or a string naming a model on the configured provider. `reasoning:` (`none`,
+`minimal`, `low`, `medium`, `high`, `xhigh`, `max`) sets how hard a reasoning
+model thinks; less is faster and cheaper. `ECKO_AI_REASONING` sets it for calls
+that do not.
+
+Switching provider never borrows `ECKO_API_KEY`: the key comes from `key:`, else
+`OPENROUTER_API_KEY` or `OPENAI_API_KEY`, and a call with no key for its
+provider runs in mock mode. A request fails when nothing arrives for
+`ECKO_AI_READ_TIMEOUT_MS` (default 120000) - a limit on silence, so a long
+reply that keeps streaming is not cut off.
 
 ## Conversations
 
@@ -191,7 +226,8 @@ the trace file. Treat trace output like any log.
 
 ## Caching
 
-`ECKO_AI_CACHE=<dir>` (or `--cache`) enables a content-addressed prompt cache.
+`ECKO_AI_CACHE=<dir>` (or `ecko --cache app.ecko`, which uses `.ecko-cache/` -
+Ecko's own flags go before the file) enables a content-addressed prompt cache.
 Identical calls - same provider, model, prompt and schema - replay through the
 normal coercion path: no API call, no budget consumption, traced as
 `cached: true`. Votes and conversational turns bypass it. Mock mode bypasses it.

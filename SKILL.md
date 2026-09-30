@@ -29,7 +29,9 @@ ecko test                # discovers tests/*.ecko and *_test.ecko
 error-severity finding **stops the program before it starts**. Treat a clean
 `ecko check` as the bar for "I finished."
 
-`ecko --help` is authoritative and current. Prefer it over memory.
+`ecko --help` is authoritative and current. Prefer it over memory. Ecko's own
+flags go **before** the file (`ecko --provider ollama app.ecko`); everything
+after the file is the program's own arguments, read with `os.args()`.
 
 ## The mental model in six points
 
@@ -140,7 +142,9 @@ stripping API keys.
 
 **Configuration is environment, never code:**
 `ECKO_API_KEY`, `ECKO_AI_PROVIDER` (`openai` | `openrouter` | `ollama`),
-`ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget), `ECKO_TRACE`.
+`ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget), `ECKO_TRACE`. One call can
+pick its own model with `via model("openrouter", "...", reasoning: "low")` -
+see `reference/ai.md`.
 
 ## Types and records
 
@@ -199,6 +203,12 @@ For your own recoverable failures, throw the same shape:
 `try` takes an optional `finally` block, which runs whether or not the body
 raised. Use it to release something you acquired, not to hide a failure.
 
+An uncaught error prints the message, the line that raised it as
+`--> file:line:col`, and the call stack **outermost call first**, one
+`name at file:line:col` per frame. The location is where the error was raised,
+even inside a callback run by `map`/`pmap`, an awaited task, or an imported
+module - read the top of the snippet, not the last line of your own file.
+
 `Ok`/`Err` and `Some`/`None` exist as ordinary data types for your own
 modelling. **They are not the error channel** - nothing in the stdlib returns
 them.
@@ -246,7 +256,9 @@ for line in io.lines(fs.open("notes.txt")) {
 ```
 
 The verbs are `read`, `read_text`, `read_line`, `read_exact`, `read_until`,
-`write`, `timeout`, `close` and `lines`.
+`write`, `timeout`, `close` and `lines`, plus `tell` and `seek` for a file's
+byte offset - store `io.tell(s)` as a checkpoint and `io.seek` back to it to
+resume a large file.
 
 **Ending matters.** A read that reaches the end with nothing pending returns
 `null`. One that reaches the end *mid-answer* raises instead of answering
@@ -269,6 +281,9 @@ print(pmap([1, 2, 3], fn(n) n + 1))          # data-parallel map
 counter = cell(0)                            # thread-safe shared state
 cell_update(counter, fn(v) v + 1)            # atomic; do NOT use cell_set for this
 ```
+
+`with_timeout(ms, f)` bounds any piece of work: it returns `f()`, or throws
+`{ kind: "timeout", ms }` - milliseconds, unlike `sleep`'s seconds.
 
 Workers are **share-nothing**: each snapshots captured variables. Mutating an
 ordinary outer `mut` from a parallel closure changes only that worker's copy.
@@ -294,44 +309,44 @@ test.case("errors", fn() {
 failure, and forces mock mode. Put tests in `tests/` - a root-level
 `*_test.ecko` ships inside `ecko pack` archives.
 
-## The seven mistakes an LLM makes first
+## The eight mistakes an LLM makes first
 
-1. **Every regex must be a raw string.** `re.test("^[A-Z]{3}$", x)` returns
-   **false** with no error, because `{3}` was interpolated away. Write
-   `r"^[A-Z]{3}$"`. `ecko check` warns (`regex-interpolation`), which is another
-   reason to run it.
-2. **Nested double quotes inside interpolation.** `"{upper("x")}"` is a parse
-   error. Bind first: `u = upper("x")` then `"{u}"`.
-3. **A literal `{` in a string starts interpolation.** Escape it `\{`, or use a
-   raw string. For JSON literals use `r"""{"a": 1}"""`.
-4. **The string module is `std.str`, not `std.string`.** A module binds the last
+1. **Every regex must be a raw string.** In `"^[A-Z]{3}$"` the `{3}` is an
+   interpolation hole, so the string is `^[A-Z]3$`. `ecko check` refuses a
+   number in a hole (`literal-interpolation`) and the program does not start.
+   Write `r"^[A-Z]{3}$"`, and write every pattern raw even when it has no braces
+   yet.
+2. **A literal `{` in a string starts interpolation.** Escape it `\{`, or use a
+   raw string. For JSON literals use `r"""{"a": 1}"""`. A hole may contain
+   quotes and calls - `"{upper("x")}"` is fine - but holds one expression.
+3. **The string module is `std.str`, not `std.string`.** A module binds the last
    segment of its path, and one called `string` would displace the `string()`
    converter for the whole file. `import std.string` is an error naming the fix.
-5. **Writing `|x| ...` for a lambda.** Deprecated since 0.9.4. Use `fn(x) ...`.
-6. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")` - a value
+4. **Writing `|x| ...` for a lambda.** Deprecated since 0.9.4. Use `fn(x) ...`.
+5. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")` - a value
    thrown with `error("...")` is caught as that string, and `get` is total.
-7. **Assuming `m.missing` returns null.** It raises. Use `get(m, "missing")`.
-8. **Reassigning a bare binding.** `total = 0` then `total = total + x` is an
+6. **Assuming `m.missing` returns null.** It raises. Use `get(m, "missing")`.
+7. **Reassigning a bare binding.** `total = 0` then `total = total + x` is an
    error: declare it `mut total = 0`. `ecko fix --migrate --only=mut` adds the
    `mut` where each reassigned binding is declared.
-9. **Integer division.** `/` always divides (`7 / 2` is `3.5`); `//` is floor
+8. **Integer division.** `/` always divides (`7 / 2` is `3.5`); `//` is floor
    division (`7 // 2` is `3`) and `%` floors with it (`-7 % 2` is `1`). `+`
    joins strings only with strings: `"n=" + string(5)`, or interpolate.
 
 **Do not guess builtin names.** There is no `min_by`, `fold`, `append`,
-`eprint` or `hash`. `reference/builtins.md` is the probed list of all 107, with
+`eprint` or `hash`. `reference/builtins.md` is the probed list of all 108, with
 replacements for the names that feel like they should exist.
 
 `reference/gotchas.md` has 30 traps with the exact error each produces.
 
 ## Reference files
 
-- `reference/builtins.md` - all 107 globals, probed against the runtime, plus
+- `reference/builtins.md` - all 108 globals, probed against the runtime, plus
   the names that do not exist and what to use instead
 - `reference/language.md` - complete syntax: strings, bytes, slicing, modules,
   packages, channels, templates, contracts
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
-- `reference/stdlib.md` - all 40 `std.*` modules and every builtin, indexed
+- `reference/stdlib.md` - all 41 `std.*` modules and every builtin, indexed
 - `reference/gotchas.md` - 30 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs for common tasks
