@@ -2,9 +2,18 @@
 # Every code sample in this skill is verified.
 #   ```ecko        -> must RUN cleanly (offline, mock mode)
 #   ```ecko-check  -> must pass `ecko check` (for servers and other blocking programs)
+#
+# Blocks run in one temp project with the packages below fetched into it, the
+# way a reader gets them (`ecko get`), so a sample can `import cli` and still
+# be executed rather than shown. Fetching needs the network.
 set -u
 ECKO=${ECKO:-ecko}
+PACKAGES=(github.com/ecko-lang/cli@v1.0.0)
 TMP=$(mktemp -d); trap 'rm -rf "$TMP"' EXIT
+(cd "$TMP" && "$ECKO" init >/dev/null) || { echo "ecko init failed in $TMP"; exit 1; }
+for p in "${PACKAGES[@]}"; do
+  (cd "$TMP" && "$ECKO" get "$p" >/dev/null) || { echo "could not fetch $p - verify.sh needs the network"; exit 1; }
+done
 for md in "$@"; do
   python3 - "$md" "$TMP" <<'PY'
 import sys, os, re

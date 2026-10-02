@@ -269,37 +269,33 @@ print(re.test(r"^[A-Z]{3}$", "ABC"))  # true - raw string, pattern intact
 braces. The check catches a number in a hole, not every brace a pattern might
 grow later, and `"^{prefix}$"` is still a legitimate dynamic pattern.
 
-## 20. Units are seconds
+## 20. Every duration is milliseconds (since 0.58)
 
-`sleep(1)` sleeps one second, and an HTTP client's `timeout:` is seconds too.
-Milliseconds is the more common convention elsewhere, so this is worth pinning:
+`sleep(1000)` sleeps one second. `sleep`, `time.monotonic()`, an HTTP client's
+`timeout:`, `with_timeout`, `io.timeout`, the `std.bg` schedulers and every
+`ECKO_*_MS` variable all count whole milliseconds, as an Int:
 
 ```ecko
 import std.time
 before = time.monotonic()
-sleep(1)
-print(time.monotonic() - before > 0.9)   # true
+sleep(250)
+print(time.monotonic() - before >= 250)   # true - both sides are ms
+print(time.now() > 1000000000000)         # true - ms since the epoch
 ```
 
-The exceptions take milliseconds: the `std.bg` schedulers (`bg.after(1000,
-...)`), `with_timeout(ms, f)`, `io.timeout(s, ms)`, and the `ECKO_*_MS`
-environment variables.
+**Code written for seconds still runs, a thousand times too fast.** Before 0.58
+`sleep`, `monotonic` and `timeout:` used seconds, so `sleep(2)` from an older
+program or a model's memory now waits two milliseconds, without an error. A
+Float is refused, which catches the fractional cases:
 
-**`time.now()` is the other exception, and it is the one that bites.** It
-returns milliseconds since the epoch, while `time.monotonic()` returns seconds.
-Two clocks in one module, two units:
-
-```ecko
-import std.time
-print(time.now() > 1000000000000)        # true - milliseconds
-before = time.monotonic()
+```
 sleep(0.25)
-print(time.monotonic() - before < 1)     # true - seconds
+# error: sleep takes whole milliseconds (an Int) - it took seconds before 0.58,
+#        so sleep(0.25) is probably sleep(250) now
 ```
 
-Timing a request with `monotonic` and labelling the result `ms` is wrong by a
-factor of a thousand, and it looks perfectly plausible in a log. Multiply by
-1000 before you call it milliseconds.
+`ecko fix --migrate --only=ms src/` converts a codebase written for seconds.
+For finer timing, `time.monotonic_ns()` reads the same clock in nanoseconds.
 
 ## 21. A `Decimal` field refuses a float literal
 

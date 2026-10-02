@@ -49,7 +49,7 @@ lands `null` rather than throwing.
 
 ## Mock mode is the testing story
 
-With no `ECKO_API_KEY`:
+With no `ECKO_AI_API_KEY`:
 
 - untyped → `[AI Mock] <prompt>`
 - `ai[Int]` → `42`, `ai[Bool]` → `true`
@@ -153,7 +153,7 @@ or a string naming a model on the configured provider. `reasoning:` (`none`,
 model thinks; less is faster and cheaper. `ECKO_AI_REASONING` sets it for calls
 that do not.
 
-Switching provider never borrows `ECKO_API_KEY`: the key comes from `key:`, else
+Switching provider never borrows `ECKO_AI_API_KEY`: the key comes from `key:`, else
 `OPENROUTER_API_KEY` or `OPENAI_API_KEY`, and a call with no key for its
 provider runs in mock mode. A request fails when nothing arrives for
 `ECKO_AI_READ_TIMEOUT_MS` (default 120000) - a limit on silence, so a long
@@ -172,39 +172,49 @@ A session is a `cell` of `{ role, content }` messages, sent as a native
 role-separated array. Read it with `cell_get`. Conversational turns bypass the
 prompt cache.
 
-## Retrieval (`std.rag`)
+## Retrieval
 
 ```ecko
-import std.rag
-
 kb = [
     { id: "ai", text: "Ecko treats ai as a language keyword." },
     { id: "pkg", text: "Packages vendor into ./vendor with sha256 pinning." },
 ]
-index = rag.index(kb)
-hits = rag.retrieve(index, "what is ai in ecko", k: 1)
-print(map(hits, fn(h) h.id))
-print(len(rag.answer(index, "what is ai in ecko", k: 1)) > 0)
+index = map(kb, fn(d) merge(d, { vec: embed(d.text) }))
+
+fn retrieve(query, k) {
+    q = embed(query)
+    ranked = sort_by(index, fn(d) 0.0 - cosine(q, d.vec))
+    take(ranked, k)
+}
+
+hits = retrieve("what is ai in ecko", 1)
+print(len(hits))                    # 1
+context = join(map(hits, fn(h) h.text), "\n")
+print(len(ai "Answer from this context only:\n{context}\n\nQ: what is ai?") > 0)
 ```
 
-`rag.index` embeds a corpus, `rag.retrieve` ranks hybrid (dense cosine blended
-with lexical overlap, so it stays sensible offline), and `rag.answer` grounds an
-`ai` answer in the retrieved context. `rag.chunk` splits long documents into
-overlapping passages.
+Retrieval is two builtins: `embed(text)` turns text into a vector and
+`cosine(a, b)` compares two, so an index is a list of maps with a `vec` and a
+search is a sort. Offline, `embed` returns a deterministic hash vector rather
+than a semantic one, so a mock-mode ranking is stable but not meaningful; blend
+in a lexical score (shared words) when an offline test needs a sensible order.
+`std.rag` and `std.db` packaged this, are deprecated since 0.59, and go in the
+next breaking release - do not import them in new code.
 
 ## Budgets and cost
 
 ```ecko
 n = tokens("some prompt text")
 print(n)
-print(cost("gpt-4o-mini", n, 500) >= 0.0)
+print(cost(n, 500, 0.15, 0.6))     # USD at $0.15 / $0.60 per 1M tokens
 print(retry(2, fn() 7))
 ```
 
 - `tokens(text)` counts with cl100k_base.
-- `cost(model, in, out)` prices from a built-in table and **errors on an unknown
-  model**, so a typo cannot silently price at zero. Pass explicit prices for
-  models not in the table.
+- `cost(in_tokens, out_tokens, in_per_1m_usd, out_per_1m_usd)` prices a call
+  at the rates **you** pass. There is no built-in price table since 0.59 -
+  providers reprice, so it went stale - and `cost(model, in, out)` is an error
+  saying so.
 - `retry(n, f)` re-runs `f` on error with exponential backoff.
 - `ECKO_AI_MAX_CALLS` is the hard stop across every vote, retry and tool round.
 
@@ -216,9 +226,11 @@ hot path fails fast instead of spending.
 
 ## Tracing
 
-`ECKO_TRACE=1` (or `stderr`) traces every call to stderr; a file path appends
+`ECKO_AI_TRACE=1` (or `stderr`) traces every call to stderr; a file path appends
 JSONL. Each record carries call id, source line/col, provider, model, mock flag,
-prompt with a content hash, response, latency, retry count, token usage and cost.
+prompt with a content hash, response, latency, retry count and token usage.
+`cost_usd` is `null`: Ecko no longer guesses prices, so price the token counts
+with `cost(...)` at your provider's rates.
 
 The trace records prompts and responses **verbatim**. An unrevealed `secret`
 renders redacted, but a `reveal()`ed value interpolated into a prompt lands in
@@ -238,9 +250,15 @@ normal coercion path: no API call, no budget consumption, traced as
 import std.image
 img = image.load("chart.png")
 ai "what does this chart show?" on img
-ai[Kind] "classify this image" on img
+ai[Kind] "classify this image" on image.resize(img, 1024, 1024)
 ai "spot the differences" on [before, after]
 ```
+
+An image is a **value** since 0.59: a map `{ format, width, height, bytes }`, so
+`img.width` works, a transform returns a new image, and nothing needs freeing
+(`image.free` is a deprecated no-op). Passing an integer to `on` - the old
+handle - is an error. Resize before sending: images cost tokens, and a
+4000-pixel photo rarely answers better than a 1000-pixel one.
 
 Serializes to OpenAI `image_url` data-URLs or Ollama base64 arrays from the same
 source. Mock mode echoes the prompt plus real image dimensions.

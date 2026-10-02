@@ -32,11 +32,11 @@ command turns up. Nothing to configure.
 
 | file | what it holds |
 |---|---|
-| `SKILL.md` | the entry point: mental model, syntax, AI primitives, the eight mistakes a model makes first |
+| `SKILL.md` | the entry point: mental model, syntax, AI primitives, the ten mistakes a model makes first |
 | `reference/builtins.md` | all 108 globals, probed against the runtime, and the names that do not exist |
 | `reference/language.md` | strings, slicing, templates, contracts, modules, concurrency, the CLI |
 | `reference/ai.md` | typed output and coercion, retries, tool calling, sessions, budgets, tracing |
-| `reference/stdlib.md` | 41 `std.*` modules and 407 exports, indexed |
+| `reference/stdlib.md` | 41 `std.*` modules and 410 exports, indexed, with what is deprecated |
 | `reference/gotchas.md` | 30 traps, each with the exact error it produces |
 | `reference/recipes.md` | 10 complete programs, all of which run offline |
 

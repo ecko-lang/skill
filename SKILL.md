@@ -45,7 +45,7 @@ after the file is the program's own arguments, read with `os.args()`.
    trailing binary operator, before a leading `|>` or `.`, or inside `(...)`/`[...]`.
 3. **Access is strict.** `m.missing` and `xs[99]` are errors. `get(m, k)` is the
    nullable lookup that returns `null`.
-4. **Everything runs offline.** With no `ECKO_API_KEY`, `ai` returns
+4. **Everything runs offline.** With no `ECKO_AI_API_KEY`, `ai` returns
    deterministic, schema-valid mock values. Never write a program that needs a
    key to be testable.
 5. **One error dialect.** Absence returns `null`; every error the runtime
@@ -71,6 +71,7 @@ fn describe(n) {                     # block body; last expression is the value
 double = fn(x) x * 2                 # anonymous
 fn box(w, h, fill = "-") = fill * (w * h)    # default parameter
 box(2, h: 3)                                  # named argument
+fn area(w: Float, h: Float) = w * h           # typed parameters, checked
 
 # Control flow - all of these are expressions
 mut count = 2
@@ -79,7 +80,8 @@ unless count > 0 { print("empty") }          # negated if; good as a guard
 for i in 0..3 { print(i) }                   # 0..3 exclusive, 0..=3 inclusive
 for (k, v) in { a: 1, b: 2 } { print(k) }    # maps iterate sorted, as [k, v]
 for (i, x) in enumerate(["a", "b"]) { print(string(i) + x) }
-while count > 0 { count = count - 1 }        # `break` and `continue` both work
+while count > 0 { count -= 1 }               # `break` and `continue` both work
+if 2 in [1, 2, 3] { print("found") }         # membership: lists, strings, map keys
 
 # Pipelines - the idiomatic way to express a transformation
 result = [3, 1, 2]
@@ -99,8 +101,8 @@ print("hello {who}")
 print("hello {upper(who)}")
 ```
 
-That block runs as-is and prints `empty`, `0`, `1`, `2`, `a`, `b`, `0a`, `1b`,
-`hello world`, `hello WORLD`. Every `ecko` block in this skill and its reference
+That block runs as-is and prints `0`, `1`, `2`, `a`, `b`, `0a`, `1b`,
+`found`, `hello world`, `hello WORLD`. Every `ecko` block in this skill and its reference
 files is executed by `verify.sh` - if one does not run, it is a bug.
 
 ## The AI primitives
@@ -141,8 +143,11 @@ what makes AI pipelines unit-testable, and `ecko test` **forces** mock mode by
 stripping API keys.
 
 **Configuration is environment, never code:**
-`ECKO_API_KEY`, `ECKO_AI_PROVIDER` (`openai` | `openrouter` | `ollama`),
-`ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget), `ECKO_TRACE`. One call can
+`ECKO_AI_API_KEY`, `ECKO_AI_PROVIDER` (`openai` | `openrouter` | `ollama`),
+`ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget), `ECKO_AI_TRACE`. Every
+setting is `ECKO_<AREA>_<SETTING>` since 0.58; the old names (`ECKO_API_KEY`,
+`ECKO_TRACE`, `ECKO_MAX_*`) still work in 0.59 with a warning, so write the
+new ones. One call can
 pick its own model with `via model("openrouter", "...", reasoning: "low")` -
 see `reference/ai.md`.
 
@@ -265,7 +270,7 @@ resume a large file.
 short: `read_exact` below its count, `read_until` with no delimiter, a
 character cut in half. So `null` means clean end, and an error means truncated.
 
-`io.timeout(s, ms)` sets a deadline and raises when it passes. `ECKO_MAX_ALLOC`
+`io.timeout(s, ms)` sets a deadline and raises when it passes. `ECKO_LIMIT_ALLOC`
 bounds each piece rather than the whole stream.
 
 ## Concurrency
@@ -283,7 +288,7 @@ cell_update(counter, fn(v) v + 1)            # atomic; do NOT use cell_set for t
 ```
 
 `with_timeout(ms, f)` bounds any piece of work: it returns `f()`, or throws
-`{ kind: "timeout", ms }` - milliseconds, unlike `sleep`'s seconds.
+`{ kind: "timeout", ms }`. Every duration is milliseconds, `sleep` included.
 
 Workers are **share-nothing**: each snapshots captured variables. Mutating an
 ordinary outer `mut` from a parallel closure changes only that worker's copy.
@@ -309,7 +314,7 @@ test.case("errors", fn() {
 failure, and forces mock mode. Put tests in `tests/` - a root-level
 `*_test.ecko` ships inside `ecko pack` archives.
 
-## The eight mistakes an LLM makes first
+## The ten mistakes an LLM makes first
 
 1. **Every regex must be a raw string.** In `"^[A-Z]{3}$"` the `{3}` is an
    interpolation hole, so the string is `^[A-Z]3$`. `ecko check` refuses a
@@ -332,6 +337,21 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
 8. **Integer division.** `/` always divides (`7 / 2` is `3.5`); `//` is floor
    division (`7 // 2` is `3`) and `%` floors with it (`-7 % 2` is `1`). `+`
    joins strings only with strings: `"n=" + string(5)`, or interpolate.
+9. **Passing options as a map.** A built-in's options are named arguments:
+   `json.decode(s, decimal: true)`, `proc.run(cmd, args, timeout_ms: 5000)`.
+   `json.decode(s, { decimal: true })` is refused (`positional-options`), and so
+   is a misspelled option name.
+10. **Durations in seconds.** `sleep(2)` waits two **milliseconds**; write
+    `sleep(2000)`. `time.monotonic()`, `timeout:` and every `_MS` setting are
+    milliseconds too. A Float such as `sleep(0.5)` is refused, but a whole
+    number written for seconds runs, too fast. `ecko fix --migrate --only=ms`
+    converts old code.
+
+**Reaching for a deprecated module.** `std.cli`, `std.humanize`, `std.debug`,
+`std.rag`, `std.db` and `std.serial`, the styling half of `std.term`
+(`term.bold`, ...), `fmt.pad_left`/`pad_right`/`repeat`/`truncate` and
+`image.free` are deprecated since 0.59. `ecko check` warns with the
+replacement: mostly a package (`cli`, `humanize`, `tui`), sometimes a builtin.
 
 **Do not guess builtin names.** There is no `min_by`, `fold`, `append`,
 `eprint` or `hash`. `reference/builtins.md` is the probed list of all 108, with
@@ -347,6 +367,7 @@ replacements for the names that feel like they should exist.
   packages, channels, templates, contracts
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
-- `reference/stdlib.md` - all 41 `std.*` modules and every builtin, indexed
+- `reference/stdlib.md` - all 41 `std.*` modules and their 410 exports, with
+  what is deprecated and its replacement
 - `reference/gotchas.md` - 30 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs for common tasks

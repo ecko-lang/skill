@@ -34,18 +34,17 @@ offline and online alike.
 ## 2. Grounded agent: retrieval + tools + contracts
 
 ```ecko
-import std.rag
-
 kb = [
     { id: "ai", text: "Ecko treats ai as a language keyword with typed output." },
     { id: "pkg", text: "Packages vendor into ./vendor with sha256-pinned ecko.lock." },
     { id: "async", text: "Calling an async fn spawns a task; await joins it." },
 ]
-index = rag.index(kb)
+index = map(kb, fn(d) merge(d, { vec: embed(d.text) }))
 
 @tool("search the product docs for passages relevant to a question")
 fn search_docs(query) {
-    hits = rag.retrieve(index, query, k: 2)
+    q = embed(query)
+    hits = take(sort_by(index, fn(d) 0.0 - cosine(q, d.vec)), 2)
     { sources: sort(map(hits, fn(h) h.id)), excerpt: join(map(hits, fn(h) h.text), " | ") }
 }
 
@@ -220,8 +219,12 @@ in `tests/` so `ecko pack` does not ship them.
 
 ## 9. CLI tool
 
+Argument parsing is the [`cli` package](https://github.com/ecko-lang/cli) since
+0.59 (`std.cli` is deprecated): `ecko get github.com/ecko-lang/cli`, then
+`import cli`. `ecko scaffold cli mytool` starts a project with it vendored.
+
 ```ecko
-import std.cli
+import cli
 
 spec = {
     name: "greet",

@@ -23,6 +23,38 @@ fn slug(s) = replace(lower(trim(s)), " ", "-")
 print(slug("  Hello World  "))
 ```
 
+## Parameters, assignment and membership (since 0.58)
+
+```ecko
+fn fee(amount: Decimal, rate: Decimal = 0.03m) = amount * rate
+print(fee(100.00m))                 # 3.0000 - the scales add
+
+mut total = 0
+for n in [3, 4, 5] {
+    total += n                      # also -=, *=, /=, //=, %=
+}
+print(total)                        # 12
+
+print(2 in [1, 2, 3])               # true - same answer as contains(xs, x)
+print("ck" in "ecko")               # true - substring
+print("a" in { a: 1 })              # true - a map key
+print(not 9 in 0..5)                # true - `not x in xs` is `not (x in xs)`
+```
+
+- **A parameter type is checked**, by the same rules as a record field: `Int`
+  widens to `Float` and `Decimal`, `Float` never narrows to `Int`, `Option<T>`
+  also takes `null`, `List<T>` checks each element. `ecko check` refuses a
+  literal that can never fit (`fee("5")`) before the program runs; any other
+  value is checked on entry and throws ``parameter `amount` of `fee` expects
+  Decimal, got string`` (`kind: "bug"`). Unannotated parameters take anything.
+  On an `@tool` function the annotations are the schema the model sees. A
+  return type (`-> Int`) parses but is not checked.
+- **`x += e` is `x = x + e`**: the binding still has to be `mut`, and it works
+  through fields and indexes (`m.n += 1`, `xs[0] += 1`). A target with a side
+  effect, `xs[next()] += 1`, is refused - bind the index first.
+- **`in` works on lists, strings, bytes, map keys and Int ranges.** A pair it
+  cannot answer, such as `1 in 5`, is an error rather than `false`.
+
 ## Strings
 
 ```ecko
@@ -261,7 +293,7 @@ for j in jobs { print(j) }   # drains until closed
 
 ```ecko
 slow = fn() {
-    sleep(5)
+    sleep(5000)
     "done"
 }
 r = try {
@@ -271,20 +303,29 @@ r = try {
 }
 print(r)                     # timeout
 ```
-- At most `ECKO_MAX_TASKS` tasks run at once (default 256); a task parked on
+- At most `ECKO_LIMIT_TASKS` tasks run at once (default 256); a task parked on
   `await` frees its slot.
 
 ## Resource limits
 
-Env vars, all with sensible defaults: `ECKO_MAX_DEPTH` (recursion, 2000),
-`ECKO_MAX_STEPS` (opt-in loop budget), `ECKO_MAX_PARSE_DEPTH` (128),
-`ECKO_MAX_PARALLEL`, `ECKO_MAX_TASKS`, `ECKO_HTTP_WORKERS`.
+Env vars, all with sensible defaults: `ECKO_LIMIT_DEPTH` (recursion, 2000),
+`ECKO_LIMIT_STEPS` (opt-in loop budget), `ECKO_LIMIT_PARSE_DEPTH` (128),
+`ECKO_LIMIT_ALLOC` (256 MiB), `ECKO_LIMIT_PARALLEL`, `ECKO_LIMIT_TASKS`,
+`ECKO_HTTP_WORKERS`.
+
+Every setting is named `ECKO_<AREA>_<SETTING>` since 0.58 (`AI_`, `LIMIT_`,
+`HTTP_`, `NET_`, `PKG_`, ...). The pre-0.58 names (`ECKO_API_KEY`,
+`ECKO_MAX_DEPTH`, `ECKO_TRACE`, ...) still work in 0.59 with a warning naming
+the new one, and stop working in the next breaking release - write the new
+ones. An invalid value (`ECKO_LIMIT_DEPTH=lots`) stops the run before it
+starts. An `ecko.json` `environment` block only fills in what the shell has not
+set.
 
 ## CLI
 
 Ecko's own flags go **before** the file; everything after it is the program's
 (`os.args()`). `ecko --provider ollama --model llama3.2 app.ecko --port 8080`.
-There is no `--key` flag: set `ECKO_API_KEY`.
+There is no `--key` flag: set `ECKO_AI_API_KEY`.
 
 ```
 ecko file.ecko              run
