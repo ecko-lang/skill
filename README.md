@@ -50,7 +50,7 @@ So every fenced block ships only after it has run:
 
 ```bash
 ./verify.sh SKILL.md reference/*.md
-# --- 62/62 blocks verified ---
+# --- 63/63 blocks verified ---
 ```
 
 - ` ```ecko ` blocks must run cleanly, offline, with no API key.

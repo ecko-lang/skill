@@ -340,4 +340,6 @@ ecko init                   scaffold ecko.json
 ecko scaffold <tmpl> <path> a whole project from a template (--list)
 ecko get / install / remove / pack     package management
 ecko dev file.ecko          run + reload on change
+ecko profile file.ecko      run and report where the time went
+ecko fix --migrate <path>   rewrite deprecated forms (--list; --only=ms, --only=mut)
 ```

@@ -325,28 +325,46 @@ print(json.encode(U(1)))        # {"__type__":"U","a":1}
 Fine for round-tripping inside Ecko, wrong for an API payload. Build a plain map
 when the JSON crosses a boundary.
 
-## 23. Qualified constructors do not work in patterns
+## 23. Match an imported type with the brace form
 
-`mod.Offer(1, 2)` constructs. The same name in a pattern does not:
-
-```
-match o { mod.Offer(a, b) => a + b }
-```
-→ `error: Expected '=>' here, but found '.'`
-
-Match on the shape instead, or import the type unqualified.
-
-## 24. The credential lint fires on an existence check
+A type from another module is matched with its **brace** pattern, qualified or
+not - both spellings match the same values:
 
 ```
+import "./deals.ecko"
+o = deals.Offer(1, 2)
+match o {
+    deals.Offer { a, b } => a + b      # 3
+    _ => 0
+}
+```
+
+**Do not use the positional form across a module.** `deals.Offer(a, b)` in a
+pattern parses but never matches, so the `match` falls through to `_` (or
+throws "Non-exhaustive match") - a wrong answer rather than an error. And a
+bare `Offer(a, b)` there resolves against the program's own types, not the
+import. Positional patterns are fine for a type declared in the same file.
+There is no selective `import { Offer }`.
+
+## 24. The credential lint flags reading a credential, not checking for one
+
+```ecko
 import std.os
-if os.env("MY_API_KEY") != null { print("configured") }
+if os.env("MY_API_KEY") != null { print("configured") }   # fine - a presence check
 ```
-→ `unwrapped-credential: os.env("MY_API_KEY") reads a credential but is not wrapped`
 
-Any env name containing `KEY` or `TOKEN` trips it, even when you are only asking
-whether it is set. `os.env_or(name, "")` avoids the warning and reads better
-than wrapping a presence check in `reveal(secret(...))`.
+Comparing against `null` or `""` never touches the value, so it is not flagged.
+Anything that reads it is:
+
+```
+key = os.env("MY_API_KEY")
+# unwrapped-credential: os.env("MY_API_KEY") reads a credential but is not
+#   wrapped - use secret(os.env("MY_API_KEY")) so it can't leak into logs,
+#   prompts, or output
+```
+
+Any env name containing `KEY` or `TOKEN` counts. Wrap the read in `secret(...)`
+and `reveal()` it only at the call that needs the real value.
 
 ## 25. `std.*` functions reject extra arguments
 
