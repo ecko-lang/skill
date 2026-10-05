@@ -105,6 +105,11 @@ print(xs[1..3])   # [2, 3]
 
 `..=` requires an end index; `s[0..=]` is a parse error.
 
+Indices count characters, not bytes, and a UTF-8 string cannot jump to the
+i-th character - `s[i]` counts up to `i` each time, quickly for ASCII text. **To
+visit every character, loop: `for c in s` walks the string once**, where
+`while i < len(s) { s[i] }` costs more the longer the string gets.
+
 ## Numbers
 
 `int` is i64 with **checked** arithmetic - overflow raises, never wraps.

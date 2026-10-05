@@ -218,6 +218,10 @@ print(io.read_line(s))                         # bb
 - **`std.signal`** - closing the last subscription gives the signal back to the
   OS, so Ctrl-C works again afterwards. Delivery is asynchronous by a few
   milliseconds; `signal.next` waits, so you will not notice.
+- **`std.log`** - `location: true` on a sink (`log.to_stderr(location:
+  true)`, `log.to_file(path, location: true)`) ends each line with its call
+  site, `at=app.ecko:12:5`, or adds an `"at"` field in JSON. The default sink
+  has no timestamp and no location, so its output stays deterministic.
 - **`std.term`** - colours and cursor moves (`term.bold`, `term.red`, ...) are
   deprecated: use the same names in the `tui` package (`ecko get
   github.com/ecko-lang/tui`), which honours `NO_COLOR`/`CLICOLOR_FORCE` via

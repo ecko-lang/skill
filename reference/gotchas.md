@@ -325,26 +325,39 @@ print(json.encode(U(1)))        # {"__type__":"U","a":1}
 Fine for round-tripping inside Ecko, wrong for an API payload. Build a plain map
 when the JSON crosses a boundary.
 
-## 23. Match an imported type with the brace form
+## 23. A positional pattern needs a type it can see
 
-A type from another module is matched with its **brace** pattern, qualified or
-not - both spellings match the same values:
+A type from another module matches positionally or by field name, qualified or
+not, all four spellings alike:
 
 ```
 import "./deals.ecko"
 o = deals.Offer(1, 2)
 match o {
-    deals.Offer { a, b } => a + b      # 3
+    deals.Offer(a, b) => a + b      # 3 - also Offer(a, b), deals.Offer { a, b }
     _ => 0
 }
 ```
 
-**Do not use the positional form across a module.** `deals.Offer(a, b)` in a
-pattern parses but never matches, so the `match` falls through to `_` (or
-throws "Non-exhaustive match") - a wrong answer rather than an error. And a
-bare `Offer(a, b)` there resolves against the program's own types, not the
-import. Positional patterns are fine for a type declared in the same file.
-There is no selective `import { Offer }`.
+A positional pattern binds by the field order the module declared, so it needs
+a type it can see. Two cases fail, with the same error:
+
+```
+match lib.ghost() { Ghost(x) => x  _ => "none" }
+# error: Pattern Ghost(..) binds 1 field(s) by position, but no type this file
+#        can see declares `Ghost`'s fields - if a module declares it, export the
+#        type and qualify the pattern with the module (`mod.Ghost(..)`), or match
+#        by field name with `Ghost { .. }`
+```
+
+- **The module builds the value but does not export its type.** Export it, or
+  match by field name: `Ghost { name }` needs no field order.
+- **Two imports export an `Offer` with different fields.** A bare `Offer(a, b)`
+  is refused rather than guessed. Qualify it as `deals.Offer(a, b)`.
+
+Before 0.59.2 a qualified positional pattern parsed and never matched, silently
+falling through to `_`, so older code may use the brace form for this reason
+alone.
 
 ## 24. The credential lint flags reading a credential, not checking for one
 
