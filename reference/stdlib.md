@@ -1,10 +1,20 @@
 # Standard library index
 
-40 modules with fixed exports, 410 functions, plus `std.defaults` (below).
-Six modules and the string-building half of `std.term` are **deprecated since
-0.59** and go in the next breaking release; each is marked with its
-replacement. `ecko check` warns at every use (`deprecated-module`,
-`deprecated-member`).
+34 modules with fixed exports, 333 functions, plus `std.defaults` (below).
+0.61 removed six modules and the string-building half of `std.term`, all
+deprecated in 0.59; using one is an error naming the replacement:
+
+| removed in 0.61 | use instead |
+|---|---|
+| `std.cli` | the `cli` package (same `parse`/`help`) |
+| `std.humanize` | the `humanize` package (same names) |
+| `std.debug` | `type_of`, `time.monotonic()`, `fmt.inspect` |
+| `std.db`, `std.rag` | `embed` + `cosine` (see `ai.md`) |
+| `std.serial` | nothing in std |
+| `term.bold`, `term.red`, ... (44) | the same names in the `tui` package |
+| `fmt.pad_left`/`pad_right`/`repeat`/`truncate` | `str.pad_start`/`str.pad_end`/`str.repeat`, `s[..n]` |
+| `image.free` | nothing - an image is a value |
+
 `import std.x` binds `x`.
 
 Everything here is in the single binary - there is nothing to install, and no
@@ -36,19 +46,15 @@ top-level key becomes a member, keeping its JSON type.
 |---|---|---|
 | `std.archive` | tar/zip create, extract, list | 6 |
 | `std.bg` | fire-and-forget background tasks with lifecycle | 7 |
-| `std.cli` | *deprecated* - use the `cli` package | 2 |
 | `std.config` | load config from file with env overlay | 1 |
 | `std.csv` | CSV parse/stringify, streaming read/write | 5 |
-| `std.db` | *deprecated* - an index is `embed` + `cosine` (see `ai.md`) | 7 |
-| `std.debug` | *deprecated* - `type_of`, `time.monotonic()`, `fmt.inspect` | 4 |
 | `std.dns` | DNS lookups | 3 |
 | `std.encoding` | base64, hex, url encoding | 8 |
-| `std.fmt` | `format` templates, `fixed` decimals, `inspect` for any value | 7 |
+| `std.fmt` | `format` templates, `fixed` decimals, `inspect` for any value | 3 |
 | `std.fs` | filesystem: read, write, glob, walk, temp files | 29 |
 | `std.hash` | sha1/sha256, HMAC, Argon2id passwords, constant-time compare | 9 |
 | `std.http` | HTTP client (all verbs) + server (serve/stop) + responses | 13 |
-| `std.humanize` | *deprecated* - use the `humanize` package | 5 |
-| `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 10 |
+| `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 9 |
 | `std.io` | streams: read_line, read_all, lines, tell/seek, print | 16 |
 | `std.json` | encode/decode, read/write files | 4 |
 | `std.llm` | low-level chat access under the `ai` keyword | 2 |
@@ -57,14 +63,12 @@ top-level key becomes a member, keeping its JSON type.
 | `std.net` | TCP/UDP sockets, TLS | 14 |
 | `std.os` | env, args, exec, platform, cwd | 15 |
 | `std.proc` | child processes with pipes | 8 |
-| `std.rag` | *deprecated* - retrieval is `embed` + `cosine` (see `ai.md`) | 4 |
 | `std.random` | seeded RNG, choice, shuffle, secure bytes | 7 |
 | `std.re` | regex: test, find, captures, replace, split | 8 |
-| `std.serial` | *deprecated* - no replacement in std | 6 |
 | `std.signal` | OS signal handlers | 5 |
 | `std.sql` | embedded SQLite with transactions (Postgres/MySQL are the `postgres`/`mysql` packages) | 9 |
 | `std.str` | the full string surface | 52 |
-| `std.term` | TTY state, size, raw mode, keys; the styling moved to the `tui` package | 50 |
+| `std.term` | TTY state, colour check, size, raw mode, keys; styling is the `tui` package | 6 |
 | `std.test` | test cases and assertions for `ecko test` | 6 |
 | `std.time` | clock (ms), format, parse, monotonic / monotonic_ns | 8 |
 | `std.toml` | TOML parse/stringify | 4 |
@@ -81,21 +85,18 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.bg`** (7) - `after`, `cancel`, `every`, `join_all`, `result`, `spawn`, `status`
 
-**`std.cli`** (2) - *deprecated since 0.59, use the `cli` package (same `parse`/`help`)* - `help`, `parse`
 
 **`std.config`** (1) - `load`
 
 **`std.csv`** (5) - `each`, `parse`, `read`, `stringify`, `write`
 
-**`std.db`** (7) - *deprecated since 0.59, use nothing in std; `embed` + `cosine` (see `ai.md`)* - `add`, `clear`, `count`, `load`, `remove`, `save`, `search`
 
-**`std.debug`** (4) - *deprecated since 0.59, use `type_of`, `time.monotonic()`, `fmt.inspect`* - `elapsed`, `inspect`, `timer`, `type`
 
 **`std.dns`** (3) - `lookup`, `resolve`, `reverse`
 
 **`std.encoding`** (8) - `base64_decode`, `base64_decode_text`, `base64_encode`, `hex_decode`, `hex_decode_text`, `hex_encode`, `url_decode`, `url_encode`
 
-**`std.fmt`** (7) - `fixed`, `format`, `inspect`. *Deprecated since 0.59:* `pad_left`/`pad_right`/`repeat` → `str.pad_start`/`str.pad_end`/`str.repeat`, `truncate` → `s[..n]`
+**`std.fmt`** (3) - `fixed`, `format`, `inspect`
 
 **`std.fs`** (29) - `append`, `basename`, `canonical`, `chmod`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `read`, `read_bytes`, `remove`, `rename`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
 
@@ -103,9 +104,8 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.http`** (13) - `delete`, `get`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
 
-**`std.humanize`** (5) - *deprecated since 0.59, use the `humanize` package (same names)* - `duration`, `ordinal`, `plural`, `relative`, `size`
 
-**`std.image`** (10) - `crop`, `decode`, `dimensions`, `encode`, `height`, `load`, `resize`, `save`, `width`. *Deprecated since 0.59:* `free` (a no-op - an image is a value)
+**`std.image`** (9) - `crop`, `decode`, `dimensions`, `encode`, `height`, `load`, `resize`, `save`, `width`
 
 **`std.io`** (16) - `close`, `lines`, `print`, `read`, `read_all`, `read_exact`, `read_line`, `read_text`, `read_until`, `seek`, `stderr`, `stdin`, `stdout`, `tell`, `timeout`, `write`
 
@@ -123,13 +123,11 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.proc`** (8) - `kill`, `pid`, `run`, `spawn`, `stderr`, `stdin`, `stdout`, `wait`
 
-**`std.rag`** (4) - *deprecated since 0.59, use nothing in std; `embed` + `cosine` (see `ai.md`)* - `answer`, `chunk`, `index`, `retrieve`
 
 **`std.random`** (7) - `bytes`, `choice`, `float`, `int`, `seed`, `shuffle`, `token`
 
 **`std.re`** (8) - `captures`, `captures_all`, `find`, `find_all`, `replace`, `replace_first`, `split`, `test`
 
-**`std.serial`** (6) - *deprecated since 0.59, use nothing in std* - `drain`, `dtr`, `flush`, `open`, `ports`, `rts`
 
 **`std.signal`** (5) - `close`, `names`, `next`, `on`, `raise`
 
@@ -137,7 +135,7 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.str`** (52) - `capitalize`, `category`, `center`, `char_at`, `chars`, `chr`, `contains`, `count`, `ends_with`, `eq_ignore_case`, `from`, `from_utf8`, `from_utf8_lossy`, `index_of`, `is_alnum`, `is_alpha`, `is_ascii`, `is_blank`, `is_digit`, `is_empty`, `is_lower`, `is_space`, `is_upper`, `join`, `last_index_of`, `len`, `lines`, `lower`, `normalize`, `ord`, `pad_end`, `pad_start`, `partition`, `repeat`, `replace`, `replace_first`, `reverse`, `rpartition`, `rsplit`, `split`, `split_whitespace`, `starts_with`, `substring`, `swapcase`, `title`, `trim`, `trim_end`, `trim_prefix`, `trim_start`, `trim_suffix`, `upper`, `zfill`
 
-**`std.term`** (50) - `color_enabled`, `is_tty`, `poll`, `raw_mode`, `read_key`, `size`. *Deprecated since 0.59, the same names in the `tui` package:* `alt_screen`, `black`, `blink`, `blue`, `bold`, `bright_black`, `bright_blue`, `bright_cyan`, `bright_green`, `bright_magenta`, `bright_red`, `bright_white`, `bright_yellow`, `clear`, `clear_down`, `clear_line`, `color`, `cyan`, `dim`, `down`, `goto`, `gray`, `green`, `grey`, `hide_cursor`, `italic`, `left`, `link`, `magenta`, `red`, `restore_cursor`, `reverse`, `rgb`, `right`, `save_cursor`, `show_cursor`, `strikethrough`, `strip`, `style`, `underline`, `up`, `white`, `width`, `yellow`
+**`std.term`** (6) - `color_enabled`, `is_tty`, `poll`, `raw_mode`, `read_key`, `size`
 
 **`std.test`** (6) - `case`, `eq`, `err`, `fail`, `group`, `ok`
 
@@ -223,9 +221,8 @@ print(io.read_line(s))                         # bb
   site, `at=app.ecko:12:5`, or adds an `"at"` field in JSON. The default sink
   has no timestamp and no location, so its output stays deterministic.
 - **`std.term`** - colours and cursor moves (`term.bold`, `term.red`, ...) are
-  deprecated: use the same names in the `tui` package (`ecko get
-  github.com/ecko-lang/tui`), which honours `NO_COLOR`/`CLICOLOR_FORCE` via
-  `term.color_enabled()`. `raw_mode(true)` is undone on exit, on error, **and** when a
+  the `tui` package's (`ecko get github.com/ecko-lang/tui`) since 0.61, which
+  honours `NO_COLOR`/`CLICOLOR_FORCE` via `term.color_enabled()`. `raw_mode(true)` is undone on exit, on error, **and** when a
   signal kills the program, so a TUI cannot strand your shell without echo.
 - **`std.json`** - numbers that are not integers decode as floats unless you
   pass `decimal: true`, which reads each one as an exact decimal - what a

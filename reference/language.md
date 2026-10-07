@@ -329,9 +329,8 @@ Env vars, all with sensible defaults: `ECKO_LIMIT_DEPTH` (recursion, 2000),
 
 Every setting is named `ECKO_<AREA>_<SETTING>` since 0.58 (`AI_`, `LIMIT_`,
 `HTTP_`, `NET_`, `PKG_`, ...). The pre-0.58 names (`ECKO_API_KEY`,
-`ECKO_MAX_DEPTH`, `ECKO_TRACE`, ...) still work in 0.60 with a warning naming
-the new one, and stop working in the next breaking release - write the new
-ones. An invalid value (`ECKO_LIMIT_DEPTH=lots`) stops the run before it
+`ECKO_MAX_DEPTH`, `ECKO_TRACE`, ...) are not read since 0.61; one that is set
+only prints a warning naming the new one - write the new ones. An invalid value (`ECKO_LIMIT_DEPTH=lots`) stops the run before it
 starts. An `ecko.json` `environment` block only fills in what the shell has not
 set.
 

@@ -147,8 +147,8 @@ stripping API keys.
 `ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget - per request inside
 `http.serve`, per run for a script), `ECKO_AI_TRACE`. Every
 setting is `ECKO_<AREA>_<SETTING>` since 0.58; the old names (`ECKO_API_KEY`,
-`ECKO_TRACE`, `ECKO_MAX_*`) still work in 0.60 with a warning, so write the
-new ones. One call can
+`ECKO_TRACE`, `ECKO_MAX_*`) are not read since 0.61 - a set one only warns -
+so write the new ones. One call can
 pick its own model with `via model("openrouter", "...", reasoning: "low")` -
 see `reference/ai.md`.
 
@@ -348,11 +348,12 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
     number written for seconds runs, too fast. `ecko fix --migrate --only=ms`
     converts old code.
 
-**Reaching for a deprecated module.** `std.cli`, `std.humanize`, `std.debug`,
+**Reaching for a removed module.** `std.cli`, `std.humanize`, `std.debug`,
 `std.rag`, `std.db` and `std.serial`, the styling half of `std.term`
 (`term.bold`, ...), `fmt.pad_left`/`pad_right`/`repeat`/`truncate` and
-`image.free` are deprecated since 0.59. `ecko check` warns with the
-replacement: mostly a package (`cli`, `humanize`, `tui`), sometimes a builtin.
+`image.free` were removed in 0.61. Using one is an error naming the
+replacement: mostly a package (`cli`, `humanize`, `tui`), sometimes a builtin
+(`fmt.inspect`, `str.pad_start`, `embed` + `cosine`).
 
 **Do not guess builtin names.** There is no `min_by`, `fold`, `append`,
 `eprint` or `hash`. `reference/builtins.md` is the probed list of all 108, with
@@ -368,7 +369,7 @@ replacements for the names that feel like they should exist.
   packages, channels, templates, contracts
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
-- `reference/stdlib.md` - all 41 `std.*` modules and their 410 exports, with
-  what is deprecated and its replacement
+- `reference/stdlib.md` - all 35 `std.*` modules and their 333 exports, with
+  what was removed in 0.61 and its replacement
 - `reference/gotchas.md` - 30 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs for common tasks

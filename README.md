@@ -36,7 +36,7 @@ command turns up. Nothing to configure.
 | `reference/builtins.md` | all 108 globals, probed against the runtime, and the names that do not exist |
 | `reference/language.md` | strings, slicing, templates, contracts, modules, concurrency, the CLI |
 | `reference/ai.md` | typed output and coercion, retries, tool calling, sessions, budgets, tracing |
-| `reference/stdlib.md` | 41 `std.*` modules and 410 exports, indexed, with what is deprecated |
+| `reference/stdlib.md` | 35 `std.*` modules and 333 exports, indexed, with what was removed in 0.61 |
 | `reference/gotchas.md` | 30 traps, each with the exact error it produces |
 | `reference/recipes.md` | 10 complete programs, all of which run offline |
 

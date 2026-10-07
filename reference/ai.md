@@ -198,8 +198,8 @@ Retrieval is two builtins: `embed(text)` turns text into a vector and
 search is a sort. Offline, `embed` returns a deterministic hash vector rather
 than a semantic one, so a mock-mode ranking is stable but not meaningful; blend
 in a lexical score (shared words) when an offline test needs a sensible order.
-`std.rag` and `std.db` packaged this, are deprecated since 0.59, and go in the
-next breaking release - do not import them in new code.
+`std.rag` and `std.db` packaged this until 0.61, which removed them; importing
+either is an error.
 
 ## Budgets and cost
 
@@ -260,7 +260,7 @@ ai "spot the differences" on [before, after]
 
 An image is a **value** since 0.59: a map `{ format, width, height, bytes }`, so
 `img.width` works, a transform returns a new image, and nothing needs freeing
-(`image.free` is a deprecated no-op). Passing an integer to `on` - the old
+(`image.free` was removed in 0.61). Passing an integer to `on` - the old
 handle - is an error. Resize before sending: images cost tokens, and a
 4000-pixel photo rarely answers better than a 1000-pixel one.
 

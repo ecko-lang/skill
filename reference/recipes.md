@@ -219,8 +219,8 @@ in `tests/` so `ecko pack` does not ship them.
 
 ## 9. CLI tool
 
-Argument parsing is the [`cli` package](https://github.com/ecko-lang/cli) since
-0.59 (`std.cli` is deprecated): `ecko get github.com/ecko-lang/cli`, then
+Argument parsing is the [`cli` package](https://github.com/ecko-lang/cli)
+(`std.cli` was removed in 0.61): `ecko get github.com/ecko-lang/cli`, then
 `import cli`. `ecko scaffold cli mytool` starts a project with it vendored.
 
 ```ecko
