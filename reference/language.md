@@ -47,8 +47,17 @@ print(not 9 in 0..5)                # true - `not x in xs` is `not (x in xs)`
   literal that can never fit (`fee("5")`) before the program runs; any other
   value is checked on entry and throws ``parameter `amount` of `fee` expects
   Decimal, got string`` (`kind: "bug"`). Unannotated parameters take anything.
-  On an `@tool` function the annotations are the schema the model sees. A
-  return type (`-> Int`) parses but is not checked.
+  On an `@tool` function the annotations are the schema the model sees.
+- **A return type is checked too (since 0.60)**: `fn label(n) -> String`
+  holds on every value the function returns - its last value and each
+  `return` - by the same rules, and throws `` `label` is declared to return
+  String, but returned int `` (`kind: "bug"`) before any `@ensures` runs. A
+  function that can end without a value returns `null`, so it needs
+  `-> Option<T>`. Only write `-> T` when it is true; leaving it off is fine.
+- **Each `for` iteration has its own loop variable (since 0.60)**, so a
+  closure made in the loop keeps its item: pushing `fn() i * 10` for `i` in
+  `[1, 2, 3]` gives `[10, 20, 30]`. A `mut` declared outside the loop is still
+  shared by every closure.
 - **`x += e` is `x = x + e`**: the binding still has to be `mut`, and it works
   through fields and indexes (`m.n += 1`, `xs[0] += 1`). A target with a side
   effect, `xs[next()] += 1`, is refused - bind the index first.
@@ -320,7 +329,7 @@ Env vars, all with sensible defaults: `ECKO_LIMIT_DEPTH` (recursion, 2000),
 
 Every setting is named `ECKO_<AREA>_<SETTING>` since 0.58 (`AI_`, `LIMIT_`,
 `HTTP_`, `NET_`, `PKG_`, ...). The pre-0.58 names (`ECKO_API_KEY`,
-`ECKO_MAX_DEPTH`, `ECKO_TRACE`, ...) still work in 0.59 with a warning naming
+`ECKO_MAX_DEPTH`, `ECKO_TRACE`, ...) still work in 0.60 with a warning naming
 the new one, and stop working in the next breaking release - write the new
 ones. An invalid value (`ECKO_LIMIT_DEPTH=lots`) stops the run before it
 starts. An `ecko.json` `environment` block only fills in what the shell has not

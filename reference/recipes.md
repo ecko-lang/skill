@@ -269,4 +269,6 @@ if tokens(prompt) > 100000 {
 ```
 
 Set `ECKO_AI_MAX_CALLS` in production as the hard stop - retries, votes and tool
-rounds all multiply, and it is the only thing that bounds the total.
+rounds all multiply, and it is the only thing that bounds the total. Inside
+`http.serve` it caps each request (and each WebSocket message), so a server never
+runs out; a script counts its whole run.

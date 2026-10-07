@@ -217,6 +217,10 @@ print(retry(2, fn() 7))
   saying so.
 - `retry(n, f)` re-runs `f` on error with exponential backoff.
 - `ECKO_AI_MAX_CALLS` is the hard stop across every vote, retry and tool round.
+  A script counts its whole run. Inside `http.serve` each request counts on
+  its own (each message, for an `on_ws` handler), including the `pmap` workers,
+  tasks and tool rounds it starts. The `budget` error carries `calls`, `max`
+  and `scope` (`"request"`, `"message"` or `"process"`).
 
 **The dials multiply.** A typed call retries up to 3 times; each voting sample
 runs its own retry loop; each tool round is a call. `ai[T] 5 "..."` can spend 20

@@ -144,9 +144,10 @@ stripping API keys.
 
 **Configuration is environment, never code:**
 `ECKO_AI_API_KEY`, `ECKO_AI_PROVIDER` (`openai` | `openrouter` | `ollama`),
-`ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget), `ECKO_AI_TRACE`. Every
+`ECKO_AI_MODEL`, `ECKO_AI_MAX_CALLS` (hard budget - per request inside
+`http.serve`, per run for a script), `ECKO_AI_TRACE`. Every
 setting is `ECKO_<AREA>_<SETTING>` since 0.58; the old names (`ECKO_API_KEY`,
-`ECKO_TRACE`, `ECKO_MAX_*`) still work in 0.59 with a warning, so write the
+`ECKO_TRACE`, `ECKO_MAX_*`) still work in 0.60 with a warning, so write the
 new ones. One call can
 pick its own model with `via model("openrouter", "...", reasoning: "low")` -
 see `reference/ai.md`.
