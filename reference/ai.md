@@ -43,6 +43,12 @@ print(type_of(u.tags))   # list
 records all recurse. `Result<T, E>` does **not** - it falls back to the
 permissive `json` schema.
 
+**`T` must exist.** No AI types are built in - declare the set you want
+(`type Sentiment = Positive | Negative | Neutral`). Naming a type the program
+has not declared, or a typo, is an error naming it (`kind: "bug"`) since 0.62;
+before that it quietly returned `null`, and `Sentiment`, `Classification` and
+`Entity` were predefined, so older examples may use them undeclared.
+
 When coercion fails, the field name is threaded back to the model as a retry
 reason, up to `ECKO_AI_MAX_RETRIES` (default 3). If it still fails, the field
 lands `null` rather than throwing.
