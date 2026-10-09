@@ -172,6 +172,11 @@ When **no** arm matches, the error names the value -
 block it also names the error being handled, `(while handling: disk full)`.
 End a `match` on `get(e, "kind")` with `_ => error(e)` so nothing is lost.
 
+A `match` over a **declared type** must cover every variant or end with `_`.
+Since 0.63 a missing variant is an error (`non-exhaustive-match`): `ecko check`
+fails and the program does not start. A guarded arm (`Closed when old => ...`)
+does not count as covering its variant, because the guard can fail.
+
 A keyword key in a pattern needs the explicit form: `{ type: t }`, not `{ type }`.
 
 ## Templates - the home for prompts

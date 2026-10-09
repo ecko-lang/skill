@@ -336,8 +336,12 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
    error: declare it `mut total = 0`. `ecko fix --migrate --only=mut` adds the
    `mut` where each reassigned binding is declared.
 8. **Integer division.** `/` always divides (`7 / 2` is `3.5`); `//` is floor
-   division (`7 // 2` is `3`) and `%` floors with it (`-7 % 2` is `1`). `+`
-   joins strings only with strings: `"n=" + string(5)`, or interpolate.
+   division (`7 // 2` is `3`) and `%` floors with it (`-7 % 2` is `1`). Use
+   `//` whenever the result should stay an Int: a `/` there still gives the
+   right number, as a Float, and everything after it runs slower in floating
+   point. `ecko check` warns (`exact-division`) on `x / 2` inside
+   `if x % 2 == 0`. `+` joins strings only with strings: `"n=" + string(5)`,
+   or interpolate.
 9. **Passing options as a map.** A built-in's options are named arguments:
    `json.decode(s, decimal: true)`, `proc.run(cmd, args, timeout_ms: 5000)`.
    `json.decode(s, { decimal: true })` is refused (`positional-options`), and so
