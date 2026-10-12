@@ -21,7 +21,7 @@ Everything here is in the single binary - there is nothing to install, and no
 package manager step to reach any of it. `ecko doc <file>` generates the same
 kind of reference for your own code from its `##` comments.
 
-## `std.defaults` - the 41st module
+## `std.defaults` - the 35th module
 
 It has no fixed exports because its members come from the `ecko.json` sitting
 next to the file being run, which is loaded automatically before the program

@@ -10,11 +10,7 @@ The core Ecko shape: unstructured text in, a validated record out, testable
 offline.
 
 ```ecko
-type Invoice = Invoice {
-    vendor: String,
-    total: Float,
-    line_items: List<String>,
-}
+type Invoice { vendor: String, total: Float, line_items: List<String> }
 
 @ensures(result.total >= 0.0)
 fn extract(doc) = ai[Invoice] "Extract the invoice fields from: {doc}"
@@ -22,9 +18,9 @@ fn extract(doc) = ai[Invoice] "Extract the invoice fields from: {doc}"
 doc = "ACME Corp - 2 widgets, 1 gadget - total 41.50"
 inv = extract(doc)
 
-print("vendor: " + inv.vendor)
-print("total: " + string(inv.total))
-print("items: " + string(len(inv.line_items)))
+print("vendor: {inv.vendor}")
+print("total: {inv.total}")
+print("items: {len(inv.line_items)}")
 ```
 
 Mock mode fills each field with a schema-valid value of its declared type, so
@@ -62,8 +58,8 @@ fn agent(question) = {
 }
 
 report = agent("how does Ecko handle packages?")
-print("urgency: " + report.urgency)
-print("evidence length: " + string(len(report.evidence) > 0))
+print("urgency: {report.urgency}")
+print("evidence length: {len(report.evidence) > 0}")
 ```
 
 ## 3. Safe prompts for untrusted input
@@ -100,7 +96,7 @@ docs = ["first document", "second document", "third document"]
 tasks = map(docs, fn(d) summarize(d))     # all in flight at once
 out = map(tasks, fn(t) await t)           # then join
 
-for (i, s) in enumerate(out) { print(string(i) + ": " + string(len(s) > 0)) }
+for (i, s) in enumerate(out) { print("{i}: {len(s) > 0}") }
 ```
 
 `pmap` is the simpler form when you just want a parallel map and do not need
@@ -239,7 +235,7 @@ spec = {
 }
 
 r = cli.parse(spec, ["-n", "ada", "-c", "2", "--loud"])
-plain = "hello, " + r.options.name
+plain = "hello, {r.options.name}"
 msg = if r.options.loud { upper(plain) } else { plain }
 for i in range(0, r.options.count) { print(msg) }
 if r.help { print(cli.help(spec)) }

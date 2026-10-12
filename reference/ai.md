@@ -7,13 +7,14 @@
 ```ecko
 type Mood = Happy | Sad
 
-untyped = ai "What is the capital of France?"        # -> string
-typed   = ai[Int] "How many words: hello there"      # -> Int, coerced
-mood    = ai[Mood] "Classify: what a lovely day"     # -> a variant
-listed  = ai[json<List<Int>>] "List three primes"    # -> List
-voted   = ai[Mood] 5 "classify this review"          # 5 samples, majority wins
+untyped = ai "What is the capital of France?"  # -> string
+typed = ai[Int] "How many words: hello there"  # -> Int, coerced
+mood = ai[Mood] "Classify: what a lovely day"  # -> a variant
+listed = ai[json<List<Int>>] "List three primes"  # -> List
+maybe = ai[Int?] "Which year, if the text says?"  # -> Int or null
+voted = ai[Mood] "classify this review" votes 5  # 5 samples, majority wins
 
-print(type_of(untyped) + " " + type_of(typed) + " " + type_of(listed))
+print(type_of(untyped), type_of(typed), type_of(listed))
 ```
 
 Modifier clauses, and what they refuse to combine with:
@@ -21,7 +22,7 @@ Modifier clauses, and what they refuse to combine with:
 | clause | meaning | cannot combine with |
 |---|---|---|
 | `[T]` | typed output | (composes with everything) |
-| `n` (before the prompt) | majority vote of n samples, 1-25 | `-> stream` |
+| `votes n` (after the prompt) | majority vote of n samples, 1-25 | `-> stream` |
 | `using [tools]` | tool-call loop | voting, `-> stream` |
 | `with session` | conversation history | `using`, voting, `-> stream` |
 | `on image` | vision input | `using`, `with`, voting, `-> stream` |
@@ -33,13 +34,13 @@ Modifier clauses, and what they refuse to combine with:
 through it. A record's **declared field types are real**, not just its names:
 
 ```ecko
-type User = User { name: String, age: Int, tags: List<String> }
+type User { name: String, age: Int, tags: List<String> }
 u = ai[User] "invent a user"
 print(type_of(u.age))    # int    - not "int as a string"
 print(type_of(u.tags))   # list
 ```
 
-`Int`, `Float`, `Bool`, `String`, `List<T>`, `Map<K,V>`, `Option<T>` and nested
+`Int`, `Float`, `Bool`, `String`, `List<T>`, `Map<K,V>`, `T?` and nested
 records all recurse. `Result<T, E>` does **not** - it falls back to the
 permissive `json` schema.
 
@@ -115,7 +116,7 @@ and it coerces the final answer instead:
 @tool("look it up")
 fn lookup(q) = "42"
 
-type Evidence = Evidence { answer: String }
+type Evidence { answer: String }
 print(type_of(ai[Evidence] "lookup the answer" using [lookup]))
 ```
 
@@ -229,7 +230,7 @@ print(retry(2, fn() 7))
   and `scope` (`"request"`, `"message"` or `"process"`).
 
 **The dials multiply.** A typed call retries up to 3 times; each voting sample
-runs its own retry loop; each tool round is a call. `ai[T] 5 "..."` can spend 20
+runs its own retry loop; each tool round is a call. `ai[T] "..." votes 5` can spend 20
 provider calls. A string `@ensures` on a typed `ai` body compounds to a worst
 case of 16. **Set `ECKO_AI_MAX_CALLS` in production** so a failing contract on a
 hot path fails fast instead of spending.

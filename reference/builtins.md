@@ -57,6 +57,6 @@ feels like a synonym for one already in the list above, it is not there.
 ## Where the rest lives
 
 Anything not in this list is in a `std.*` module and needs an import. See
-`reference/stdlib.md` for all 41 of them. The split is roughly: if it works on
+`reference/stdlib.md` for all 35 of them. The split is roughly: if it works on
 plain data you already have, it is a builtin; if it touches the outside world
 (files, network, time, randomness, crypto, terminals) it is a module.

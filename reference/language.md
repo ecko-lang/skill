@@ -42,8 +42,8 @@ print(not 9 in 0..5)                # true - `not x in xs` is `not (x in xs)`
 ```
 
 - **A parameter type is checked**, by the same rules as a record field: `Int`
-  widens to `Float` and `Decimal`, `Float` never narrows to `Int`, `Option<T>`
-  also takes `null`, `List<T>` checks each element. `ecko check` refuses a
+  widens to `Float` and `Decimal`, `Float` never narrows to `Int`, `T?`
+  also takes `null` (`Option<T>` is the deprecated spelling), `List<T>` checks each element. `ecko check` refuses a
   literal that can never fit (`fee("5")`) before the program runs; any other
   value is checked on entry and throws ``parameter `amount` of `fee` expects
   Decimal, got string`` (`kind: "bug"`). Unannotated parameters take anything.
@@ -53,7 +53,7 @@ print(not 9 in 0..5)                # true - `not x in xs` is `not (x in xs)`
   `return` - by the same rules, and throws `` `label` is declared to return
   String, but returned int `` (`kind: "bug"`) before any `@ensures` runs. A
   function that can end without a value returns `null`, so it needs
-  `-> Option<T>`. Only write `-> T` when it is true; leaving it off is fine.
+  `-> T?`. Only write `-> T` when it is true; leaving it off is fine.
 - **Each `for` iteration has its own loop variable (since 0.60)**, so a
   closure made in the loop keeps its item: pushing `fn() i * 10` for `i` in
   `[1, 2, 3]` gives `[10, 20, 30]`. A `mut` declared outside the loop is still
@@ -135,7 +135,7 @@ print(approx(0.1 + 0.2, 0.3))  # true - float equality is exact, so use approx
 print(7 / 2)                 # 3.5 - `/` always divides
 print(7 // 2)                # 3 - floor division
 print(-7 % 2)                # 1 - `%` floors, like `//`
-print("n=" + string(5))      # `+` joins strings only with strings
+print("n=" + string(5))      # `+` joins strings only with strings - or write "n={n}"
 print(19.99m + 0.01m)        # 20.00 - scale preserved, cents never dropped
 print(round(12.345m, 2))     # 12.35 - a decimal stays a decimal at that scale
 print(round(12.5, 0, "half_even"))   # 12
@@ -251,8 +251,8 @@ print(1 shl 4)         # 16
 
 `bytes` holds binary data a UTF-8 `string` cannot. The text/bytes boundary is
 explicit: encoding is total, decoding fails loudly rather than inserting
-replacement characters. Bitwise operators (`&`, `|`, `^`, `<<`, `>>`) work on
-ints.
+replacement characters. The bitwise words (`band`, `bor`, `bxor`, `shl`,
+`shr`) work on ints.
 
 ## Modules and packages
 
@@ -265,7 +265,7 @@ Local files and packages:
 
 ```
 import "./helpers.ecko"            # a sibling file, bound to `helpers`
-import mypkg                       # a vendored package at ./vendor/mypkg
+import mypkg                       # a vendored package, by its ecko.json alias
 import mypkg as m                  # aliased
 export fn public_thing() = 1       # only `export`ed names are visible
 export * from "./internal.ecko"    # re-export a whole surface
@@ -273,8 +273,10 @@ export * from "./internal.ecko"    # re-export a whole surface
 
 `ecko init` scaffolds `ecko.json`. `ecko get <host/owner/repo>[@version]`
 fetches, vendors and pins a sha256 in `ecko.lock`; `ecko install` rebuilds
-`vendor/` from the lock. **The manifest `name` must equal the vendored
-directory name.**
+`vendor/` from the lock. **A package's manifest `module` must equal the path it
+was fetched from** (`github.com/owner/repo`); it is vendored at
+`vendor/<that path>/`, and the importer picks the alias in its own
+`dependencies` map (`ecko get <path> --as db` for one of your choosing).
 
 The manifest is found by walking **up** from the importing file, so a bare
 `import mypkg` works anywhere in the project - from `app/`, from `tests/`, at

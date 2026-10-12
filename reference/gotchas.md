@@ -54,12 +54,16 @@ a brace.
 
 They still parse, but `ecko check` warns:
 
-> `deprecated-syntax: the |params| body lambda form is deprecated - write it as fn(params) body`
+> ``deprecated-syntax: the `|params| body` lambda form is deprecated - write it as `fn(params) body` (run `ecko fmt` to migrate)``
 
 Write `fn(x) x * 2`. `ecko fmt` rewrites it for you. Same story for `const`,
 which is an alias for `let`:
 
 > ``deprecated-syntax: `const` is deprecated - it is identical to `let` (both are immutable); use `let` (run `ecko fmt` to migrate)``
+
+Since 0.64 the same goes for `Option<T>`, which is now written `T?`, and for
+a vote count before the prompt, `ai[T] 5 "..."`, which is now
+`ai[T] "..." votes 5`. `ecko fmt` and `ecko fix --migrate` rewrite both.
 
 ## 4. Access is strict; `get` is the nullable one
 
@@ -106,7 +110,7 @@ try { error("a thrown string") } catch (e) {
 Both conversions that lose precision are refused outright:
 
 ```
-decimal(0.1)  # error: decimal(float) is lossy; pass a string, e.g. decimal("0.1")
+decimal(0.1)  # error: decimal(float) is lossy; pass a string, e.g. decimal("0.1"), to keep the exact value
 float(1.5m)   # error: Can't convert decimal to float
 ```
 
@@ -219,7 +223,7 @@ users** while `tests/foo_test.ecko` does not.
 ## 17. Parallel workers see a snapshot
 
 `pmap`, `async` tasks and `http.serve` handlers each snapshot captured
-variables. Mutating an ordinary outer `mut` changes only that worker's copy and
+variables. Mutating an ordinary outer `mut` changes only that call's copy and
 is silently lost. Share through `cell`, deliberately.
 
 ---
@@ -238,8 +242,8 @@ print(string(42))              # 42     - the converter
 print(str.title("a b c"))      # A B C  - the module
 ```
 
-Writing `import std.string` is an error that names the fix
-(`No module called 'std.string' - check the name`).
+Writing `import std.string` is an error, and the program does not start
+(`unresolved-import: import 'std.string' does not resolve`).
 It is `str` for a reason worth knowing, because it explains a rule: **a module
 binds the last segment of its path**, so a module called `string` would bind
 `string` and displace the `string()` converter for the whole file. It used to,
@@ -304,7 +308,7 @@ widens, a `String` is refused, and so is a **float literal**, which is exactly
 what a price looks like when you type it.
 
 ```ecko
-type Offer = Offer { price: Decimal }
+type Offer { price: Decimal }
 print(Offer(19).price)                   # 19 - an Int widens
 print(Offer(decimal("19.99")).price)     # 19.99 - the way to write a price
 ```
@@ -318,7 +322,7 @@ value with `decimal(...)` from a string.
 
 ```ecko
 import std.json
-type U = U { a: Int }
+type U { a: Int }
 print(json.encode(U(1)))        # {"__type__":"U","a":1}
 ```
 
@@ -463,3 +467,20 @@ q = proc.spawn("daemon", [], detach: true)  # deliberately survives it
 If you actually want a survivor, say `detach: true` - then it is yours to
 manage. This changed in 0.22.0; before it, every spawned child outlived the
 program by default.
+
+## 31. A condition should be a Bool (since 0.64)
+
+`if`, `while` and `unless` still test truthiness - `false`, `null`, `0`, `0.0`,
+`0m`, `""`, `b""`, `[]`, `{}` and an empty range are false - but a condition
+that is plainly an Int, String, List or Map does not say which test was meant,
+so `ecko check` warns:
+
+```
+xs = [1]
+if xs { print("some") }
+# non-bool-condition: `xs` is a List, which is false only when it is empty -
+#   write `len(xs) > 0` to say which you mean
+```
+
+Write the comparison: `if len(xs) > 0`, `if count != 0`, `if name != ""`.
+`if x = 2` is a parse error that says to write `==`.

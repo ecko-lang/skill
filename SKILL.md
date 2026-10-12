@@ -72,6 +72,7 @@ double = fn(x) x * 2                 # anonymous
 fn box(w, h, fill = "-") = fill * (w * h)    # default parameter
 box(2, h: 3)                                  # named argument
 fn area(w: Float, h: Float) = w * h           # typed parameters, checked
+fn port(p: Int? = null) = p ?? 8080           # `T?` is "a T or null"
 
 # Control flow - all of these are expressions
 mut count = 2
@@ -79,9 +80,10 @@ status = if count > 0 { "some" } else { "none" }
 unless count > 0 { print("empty") }          # negated if; good as a guard
 for i in 0..3 { print(i) }                   # 0..3 exclusive, 0..=3 inclusive
 for (k, v) in { a: 1, b: 2 } { print(k) }    # maps iterate sorted, as [k, v]
-for (i, x) in enumerate(["a", "b"]) { print(string(i) + x) }
+for (i, x) in enumerate(["a", "b"]) { print("{i}{x}") }
 while count > 0 { count -= 1 }               # `break` and `continue` both work
 if 2 in [1, 2, 3] { print("found") }         # membership: lists, strings, map keys
+# A condition is a Bool: `if count > 0`, not `if count` (`ecko check` warns)
 
 # Pipelines - the idiomatic way to express a transformation
 result = [3, 1, 2]
@@ -99,10 +101,11 @@ fn classify(n) = match n {
 who = "world"
 print("hello {who}")
 print("hello {upper(who)}")
+print("count:", count)                       # several arguments, joined by a space
 ```
 
 That block runs as-is and prints `0`, `1`, `2`, `a`, `b`, `0a`, `1b`,
-`found`, `hello world`, `hello WORLD`. Every `ecko` block in this skill and its reference
+`found`, `hello world`, `hello WORLD`, `count: 0`. Every `ecko` block in this skill and its reference
 files is executed by `verify.sh` - if one does not run, it is a bug.
 
 ## The AI primitives
@@ -119,7 +122,7 @@ type Mood = Happy | Sad
 mood = ai[Mood] "Classify the sentiment of: what a lovely day"
 
 # Voting - n independent samples, majority wins. A quality dial.
-best = ai[Mood] 5 "classify this review"
+best = ai[Mood] "classify this review" votes 5
 
 # Tools - the runtime drives the call loop
 @tool("look up the current weather for a city")
@@ -156,7 +159,7 @@ see `reference/ai.md`.
 
 ```ecko
 type Shape = Circle { r: Int } | Square { side: Int }
-type User = User { name: String, age: Int }
+type User { name: String, age: Int }
 
 u = User("Ada", 36)
 print(u.name)
@@ -172,6 +175,12 @@ area = match Circle(3) {
 statically when the value is a literal. Assignment is checked by the same
 matcher. A `Float` field accepts an `Int`; an `Int` field rejects a `Float`.
 
+`type User { ... }` is a record: a type with one variant named after itself.
+It is the same type as the long form `type User = User { ... }`, which `ecko fmt`
+rewrites to the short one. A field or parameter that may be missing is `T?`
+(`email: String? = null`); `Option<T>` is deprecated since 0.64 and `ecko fmt`
+rewrites it.
+
 Plain maps have no declared types and stay permissive.
 
 ## Errors
@@ -183,7 +192,7 @@ try {
     data = json.decode(r"{malformed")
 } catch (e) {
     match get(e, "kind") {
-        "parse" => print("bad payload: " + get(e, "message"))
+        "parse" => print("bad payload: {get(e, "message")}")
         "net"   => print("offline")
         _       => error(e)          # re-throw what you do not handle
     }
@@ -292,7 +301,7 @@ cell_update(counter, fn(v) v + 1)            # atomic; do NOT use cell_set for t
 `{ kind: "timeout", ms }`. Every duration is milliseconds, `sleep` included.
 
 Workers are **share-nothing**: each snapshots captured variables. Mutating an
-ordinary outer `mut` from a parallel closure changes only that worker's copy.
+ordinary outer `mut` from a parallel closure changes only that call's copy.
 `cell` is the one intentional exception.
 
 ## Testing
@@ -327,21 +336,24 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
    quotes and calls - `"{upper("x")}"` is fine - but holds one expression.
 3. **The string module is `std.str`, not `std.string`.** A module binds the last
    segment of its path, and one called `string` would displace the `string()`
-   converter for the whole file. `import std.string` is an error naming the fix.
+   converter for the whole file. `import std.string` is an error
+   (`unresolved-import`) and the program does not start.
 4. **Writing `|x| ...` for a lambda.** Deprecated since 0.9.4. Use `fn(x) ...`.
 5. **Reaching for `e.kind` on a caught error.** Use `get(e, "kind")` - a value
    thrown with `error("...")` is caught as that string, and `get` is total.
 6. **Assuming `m.missing` returns null.** It raises. Use `get(m, "missing")`.
 7. **Reassigning a bare binding.** `total = 0` then `total = total + x` is an
    error: declare it `mut total = 0`. `ecko fix --migrate --only=mut` adds the
-   `mut` where each reassigned binding is declared.
+   `mut` where each reassigned binding is declared. A misspelt reassignment
+   (`totl = total + n` inside a loop, with `mut total` in scope) is refused too
+   (`likely-typo`), rather than quietly declaring a new name.
 8. **Integer division.** `/` always divides (`7 / 2` is `3.5`); `//` is floor
    division (`7 // 2` is `3`) and `%` floors with it (`-7 % 2` is `1`). Use
    `//` whenever the result should stay an Int: a `/` there still gives the
    right number, as a Float, and everything after it runs slower in floating
    point. `ecko check` warns (`exact-division`) on `x / 2` inside
-   `if x % 2 == 0`. `+` joins strings only with strings: `"n=" + string(5)`,
-   or interpolate.
+   `if x % 2 == 0`. `+` joins strings only with strings: interpolate
+   (`"n={n}"`), or convert first (`"n=" + string(n)`).
 9. **Passing options as a map.** A built-in's options are named arguments:
    `json.decode(s, decimal: true)`, `proc.run(cmd, args, timeout_ms: 5000)`.
    `json.decode(s, { decimal: true })` is refused (`positional-options`), and so
@@ -351,6 +363,12 @@ failure, and forces mock mode. Put tests in `tests/` - a root-level
     milliseconds too. A Float such as `sleep(0.5)` is refused, but a whole
     number written for seconds runs, too fast. `ecko fix --migrate --only=ms`
     converts old code.
+
+**Testing a value that is not a Bool.** `if count { }` skips at zero and
+`if name { }` at `""`, and the line does not say whether that was meant. Write
+the comparison: `count != 0`, `name != ""`, `len(xs) > 0`. `ecko check` warns
+(`non-bool-condition`) when a condition is plainly an Int, String, List or Map.
+And `if x = 2` is a parse error that says to write `==`.
 
 **Reaching for a removed module.** `std.cli`, `std.humanize`, `std.debug`,
 `std.rag`, `std.db` and `std.serial`, the styling half of `std.term`
@@ -363,7 +381,7 @@ replacement: mostly a package (`cli`, `humanize`, `tui`), sometimes a builtin
 `eprint` or `hash`. `reference/builtins.md` is the probed list of all 108, with
 replacements for the names that feel like they should exist.
 
-`reference/gotchas.md` has 30 traps with the exact error each produces.
+`reference/gotchas.md` has 31 traps with the exact error each produces.
 
 ## Reference files
 
@@ -375,5 +393,5 @@ replacements for the names that feel like they should exist.
   specs, sessions, vision, budgets, tracing
 - `reference/stdlib.md` - all 35 `std.*` modules and their 333 exports, with
   what was removed in 0.61 and its replacement
-- `reference/gotchas.md` - 30 traps, with the error each produces
+- `reference/gotchas.md` - 31 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs for common tasks
