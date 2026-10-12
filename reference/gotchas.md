@@ -226,6 +226,24 @@ users** while `tests/foo_test.ecko` does not.
 variables. Mutating an ordinary outer `mut` changes only that call's copy and
 is silently lost. Share through `cell`, deliberately.
 
+```ecko
+fn tally() {
+    mut count = 0
+    pmap(range(0, 100), fn(i) { count = count + 1 })
+    count
+}
+print(tally())                       # 0 - every call had its own copy
+
+hits = cell(0)
+pmap(range(0, 100), fn(i) cell_update(hits, fn(n) n + 1))
+print(cell_get(hits))                # 100
+```
+
+Before 0.65 `pmap` callbacks and `http.serve` handlers wrote the caller's
+variable from every worker at once, so code that counted that way got a
+different wrong number each run. If older code relied on it, move it to a
+`cell`, or collect what `pmap` returns.
+
 ---
 
 # Found while building a real app

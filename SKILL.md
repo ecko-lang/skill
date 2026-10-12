@@ -273,7 +273,10 @@ for line in io.lines(fs.open("notes.txt")) {
 The verbs are `read`, `read_text`, `read_line`, `read_exact`, `read_until`,
 `write`, `timeout`, `close` and `lines`, plus `tell` and `seek` for a file's
 byte offset - store `io.tell(s)` as a checkpoint and `io.seek` back to it to
-resume a large file.
+resume a large file. With no stream, `io.read_line()`, `io.lines()` and
+`io.read_all()` read standard input; `io.stdin()`, `io.stdout()` and
+`io.stderr()` are the console as streams, so stderr is
+`io.write(io.stderr(), "msg\n")`.
 
 **Ending matters.** A read that reaches the end with nothing pending returns
 `null`. One that reaches the end *mid-answer* raises instead of answering
@@ -301,8 +304,17 @@ cell_update(counter, fn(v) v + 1)            # atomic; do NOT use cell_set for t
 `{ kind: "timeout", ms }`. Every duration is milliseconds, `sleep` included.
 
 Workers are **share-nothing**: each snapshots captured variables. Mutating an
-ordinary outer `mut` from a parallel closure changes only that call's copy.
-`cell` is the one intentional exception.
+ordinary outer `mut` from a parallel closure - a `pmap` callback, a task, an
+`http.serve` handler - changes only that call's copy (since 0.65; before, `pmap`
+and handlers raced on it). `cell` is the one intentional exception.
+
+**Long-running services.** `http.serve` drains on `SIGTERM`/Ctrl-C by itself
+and returns, so the program exits 0. Your own loop subscribes with
+`signal.on()` and checks `signal.next(s, ms)` between units of work;
+`proc.spawn` children are driven over stream pipes and die with the program.
+To test a server, start the client as an `async` task, `http.serve(0, ...)`,
+read `http.port()`, and end it with `http.stop()`. `reference/recipes.md` #11
+and #12 are both, runnable.
 
 ## Testing
 
@@ -394,4 +406,6 @@ replacements for the names that feel like they should exist.
 - `reference/stdlib.md` - all 35 `std.*` modules and their 333 exports, with
   what was removed in 0.61 and its replacement
 - `reference/gotchas.md` - 31 traps, with the error each produces
-- `reference/recipes.md` - complete, verified programs for common tasks
+- `reference/recipes.md` - complete, verified programs: typed extraction, a
+  grounded agent, an HTTP API, a CLI on the `cli` package, a worker with
+  graceful shutdown and child processes, an in-process server test

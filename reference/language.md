@@ -271,6 +271,10 @@ export fn public_thing() = 1       # only `export`ed names are visible
 export * from "./internal.ecko"    # re-export a whole surface
 ```
 
+A module may define a name a builtin already has (`fn get(m, k)` in a package);
+`core.get`, `core.join` and so on still reach the builtin, since `core` holds
+every global.
+
 `ecko init` scaffolds `ecko.json`. `ecko get <host/owner/repo>[@version]`
 fetches, vendors and pins a sha256 in `ecko.lock`; `ecko install` rebuilds
 `vendor/` from the lock. **A package's manifest `module` must equal the path it
@@ -362,4 +366,7 @@ ecko get / install / remove / pack     package management
 ecko dev file.ecko          run + reload on change
 ecko profile file.ecko      run and report where the time went
 ecko fix --migrate <path>   rewrite deprecated forms (--list; --only=ms, --only=mut)
+ecko explain file.ecko      explain a program (static analysis + AI)
 ```
+
+`ecko lint` is deprecated: use `ecko check --strict`.

@@ -6,8 +6,8 @@ deprecated in 0.59; using one is an error naming the replacement:
 
 | removed in 0.61 | use instead |
 |---|---|
-| `std.cli` | the `cli` package (same `parse`/`help`) |
-| `std.humanize` | the `humanize` package (same names) |
+| `std.cli` | the `cli` package, `ecko get github.com/ecko-lang/cli` (same `parse`/`help`; recipe 9) |
+| `std.humanize` | the `humanize` package, `ecko get github.com/ecko-lang/humanize` (same `duration`, `size`, `relative`, `ordinal`, `plural`) |
 | `std.debug` | `type_of`, `time.monotonic()`, `fmt.inspect` |
 | `std.db`, `std.rag` | `embed` + `cosine` (see `ai.md`) |
 | `std.serial` | nothing in std |
@@ -53,19 +53,19 @@ top-level key becomes a member, keeping its JSON type.
 | `std.fmt` | `format` templates, `fixed` decimals, `inspect` for any value | 3 |
 | `std.fs` | filesystem: read, write, glob, walk, temp files | 29 |
 | `std.hash` | sha1/sha256, HMAC, Argon2id passwords, constant-time compare | 9 |
-| `std.http` | HTTP client (all verbs) + server (serve/stop) + responses | 13 |
+| `std.http` | HTTP client (get/post/put/patch/delete) + server (serve, port, stop) + responses | 13 |
 | `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 9 |
-| `std.io` | streams: read_line, read_all, lines, tell/seek, print | 16 |
+| `std.io` | the stream verbs for files, sockets, pipes, HTTP bodies; stdin/stdout/stderr | 16 |
 | `std.json` | encode/decode, read/write files | 4 |
 | `std.llm` | low-level chat access under the `ai` keyword | 2 |
 | `std.log` | levelled logging, sinks, rotation, JSON format | 8 |
 | `std.math` | trig, log, statistics, constants | 41 |
 | `std.net` | TCP/UDP sockets, TLS | 14 |
 | `std.os` | env, args, exec, platform, cwd | 15 |
-| `std.proc` | child processes with pipes | 8 |
+| `std.proc` | child processes: `run` with a deadline, `spawn` and drive over pipes | 8 |
 | `std.random` | seeded RNG, choice, shuffle, secure bytes | 7 |
 | `std.re` | regex: test, find, captures, replace, split | 8 |
-| `std.signal` | OS signal handlers | 5 |
+| `std.signal` | catch SIGTERM/Ctrl-C: subscribe, wait with a deadline, raise | 5 |
 | `std.sql` | embedded SQLite with transactions (Postgres/MySQL are the `postgres`/`mysql` packages) | 9 |
 | `std.str` | the full string surface | 52 |
 | `std.term` | TTY state, colour check, size, raw mode, keys; styling is the `tui` package | 6 |
@@ -198,7 +198,13 @@ print(io.read_line(s))                         # bb
   `max_streams:` / `ECKO_HTTP_MAX_STREAMS` (default 1024). Server limits are
   `http.serve` options - `workers:`, `max_body:`, `max_conns:`,
   `read_timeout_ms:`, `request_timeout_ms:`, `drain_ms:` - and the matching
-  `ECKO_HTTP_*` variable overrides the option when set.
+  `ECKO_HTTP_*` variable overrides the option when set. `serve` blocks until
+  shutdown: `SIGTERM`, Ctrl-C or `http.stop()` stops accepting, finishes
+  in-flight requests (up to `ECKO_HTTP_DRAIN_MS`, default 25000) and returns, so
+  the program exits 0; a second signal forces it. `http.port()` is `null` when
+  no server is running. Recipe 12 tests a server in-process with all three.
+  Handlers are share-nothing: since 0.65 a captured `mut` is a per-request copy
+  (before, handlers raced on it), so count requests with a `cell`.
 - **`std.net`** - client *and* server. `listen` answers a listener, and
   `accept` answers a connection stream, or `null` when nothing arrived before
   its deadline. A listener is not a stream: reading it yields connections, not
@@ -211,11 +217,21 @@ print(io.read_line(s))                         # bb
   argument of bind parameters. `transaction` rolls back if the function raises
   **and** if the commit itself fails, so a failed commit does not leave the
   connection inside the transaction.
-- **`std.proc`** - a spawned child is signalled when your program ends, unless
-  you pass `detach: true`. Nothing you spawn outlives you by accident.
-- **`std.signal`** - closing the last subscription gives the signal back to the
-  OS, so Ctrl-C works again afterwards. Delivery is asynchronous by a few
-  milliseconds; `signal.next` waits, so you will not notice.
+- **`std.proc`** - `run(cmd, args, timeout_ms:)` waits and answers `{ code,
+  stdout, stderr, timed_out }`; a timeout is `timed_out: true`, not an error.
+  `spawn` gives a handle whose `proc.stdin`/`stdout`/`stderr` are streams for
+  `std.io`; `io.close(proc.stdin(p))` sends end of input. `wait(p)` with no
+  deadline is a poll (`null` while running); `wait(p, ms)` kills and reaps at
+  the deadline. Deadlines and `kill` signal the whole process group. A spawned
+  child is signalled when your program ends, unless you pass `detach: true`.
+  Nothing you spawn outlives you by accident. Recipe 11 drives one.
+- **`std.signal`** - `on(names?)` subscribes (default `["term", "int"]`),
+  `next(s, ms)` answers a name or `null` at the deadline (`0` polls), `close(s)`
+  unsubscribes, `raise(name)` signals this process (for tests), `names()` lists
+  what the platform delivers - lowercase, no `SIG`. Closing the last
+  subscription gives the signal back to the OS, so Ctrl-C works again
+  afterwards. Delivery is asynchronous by a few milliseconds; `signal.next`
+  waits, so you will not notice unless you poll with `0`.
 - **`std.log`** - `location: true` on a sink (`log.to_stderr(location:
   true)`, `log.to_file(path, location: true)`) ends each line with its call
   site, `at=app.ecko:12:5`, or adds an `"at"` field in JSON. The default sink
@@ -236,7 +252,14 @@ print(io.read_line(s))                         # bb
 - **`std.io`** - `tell(s)` is the byte offset of the next byte you will read,
   not counting what was read ahead; `seek(s, offset)` moves there. Store the
   offset as a checkpoint to resume a large file. Only a file stream has a
-  position.
+  position. The console: `io.read_line()` and `io.lines()` with no argument read
+  standard input, `io.read_all()` takes all of it as one string, and
+  `io.stdin()`/`io.stdout()`/`io.stderr()` are the same console as streams -
+  `io.write(io.stderr(), "msg\n")` is how to write to stderr. A socket starts
+  with a 30000 ms read deadline (`ECKO_NET_TIMEOUT_MS`), a pipe and an HTTP body
+  with none; `io.timeout(s, ms)` sets one and returns the stream, and passing it
+  raises `kind: "io"` rather than returning `null`, so a slow peer is never
+  mistaken for the end.
 - **`std.web`** - `web.static(dir)` needs the `fs:read` capability on `dir`,
   like reading the files yourself would.
 - **Every module** rejects extra arguments now, so a stray argument is an error

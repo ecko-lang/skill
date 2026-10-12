@@ -38,7 +38,7 @@ command turns up. Nothing to configure.
 | `reference/ai.md` | typed output and coercion, retries, tool calling, sessions, budgets, tracing |
 | `reference/stdlib.md` | 35 `std.*` modules and 333 exports, indexed, with what was removed in 0.61 |
 | `reference/gotchas.md` | 31 traps, each with the exact error it produces |
-| `reference/recipes.md` | 10 complete programs, all of which run offline |
+| `reference/recipes.md` | 12 complete programs, all of which run offline - including a worker with graceful shutdown and an in-process server test |
 
 ## Every sample is executed
 
@@ -50,7 +50,7 @@ So every fenced block ships only after it has run:
 
 ```bash
 ./verify.sh SKILL.md reference/*.md
-# --- 63/63 blocks verified ---
+# --- 66/66 blocks verified ---
 ```
 
 - ` ```ecko ` blocks must run cleanly, offline, with no API key.

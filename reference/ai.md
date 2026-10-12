@@ -70,7 +70,8 @@ With no `ECKO_AI_API_KEY`:
   for `T`
 
 `ecko test` **strips API keys**, so tests are deterministic, offline and free by
-construction. Design programs so their AI paths are exercised in mock mode.
+construction. `ECKO_AI_MOCK=1` forces mock mode for any run, whatever keys or
+`via` say. Design programs so their AI paths are exercised in mock mode.
 
 String contracts cannot be judged offline, since there is no model to judge
 them. They pass, and stderr names each one that went unchecked; `ecko test` adds

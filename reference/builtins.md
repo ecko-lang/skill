@@ -47,7 +47,7 @@ round trip.
 | `fold(xs, f, init)` | | `reduce(xs, f, init)` |
 | `append(xs, v)` | | `push(xs, v)` |
 | `hash(s)` | | `import std.hash`, then `hash.sha256(s)` |
-| `eprint(s)` | | `import std.log`, then `log.error(s)` - that writes to stderr |
+| `eprint(s)` | | `io.write(io.stderr(), s + "\n")` after `import std.io`, or `log.error(s)` from `std.log` - both write to stderr |
 | `map_get` / `dict` / `list_append` | | `get`, `{}` literals, `push` |
 
 The pattern behind the misses: Ecko keeps one name per job. There is no `_by`
