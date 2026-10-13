@@ -522,8 +522,20 @@ for e in fs.walk("tree") { print(e.kind + " " + e.path) }
 ```
 
 When you want to report an unreadable directory and carry on (a backup, an
-indexer), walk it yourself: `fs.list_dir` on each directory inside a `try`,
-with a queue of directories still to visit. Each `walk` entry is
+indexer), pass `on_error:` (unreleased, after 0.66). Each unreadable directory
+goes to the function as the `{ kind: "fs", message, path }` the walk would have
+thrown, its contents are left out, and the walk continues:
+
+```ecko
+import std.fs
+fs.mkdir("tree2/ok")
+mut skipped = []
+entries = fs.walk("tree2", on_error: fn(e) { skipped = push(skipped, e.path) })
+print([len(entries), skipped])   # [1, []]
+```
+
+On 0.66 itself, walk it yourself: `fs.list_dir` on each directory inside a
+`try`, with a queue of directories still to visit. Each `walk` entry is
 `{ path, is_dir, kind, size, mtime }`, `kind` one of `"file"`, `"dir"`,
 `"symlink"`, `"other"`, and symlinks are not followed.
 
@@ -536,3 +548,57 @@ print(fs.match("notes.txt", "*.txt"))   # true
 
 `fs.match("*.txt", "notes.txt")` used to answer `false` for everything. Since
 0.66 it throws, saying the arguments look swapped.
+
+## 34. `io.read(s, n)` can return fewer than `n` bytes
+
+`io.read` is one read. It returns at most `n` bytes and may return fewer before
+the end - on a socket or a pipe, whatever has arrived; on a file, at most 1 MiB
+per read. So `io.read(s, 16 * 1024 * 1024)` on a large file returns 1 MiB, and
+code that cuts a file into fixed-size parts must not assume each read fills:
+
+```ecko
+import std.fs
+import std.io
+
+fn read_up_to(s, n) {
+    mut buf = bytes("")
+    while len(buf) < n {
+        piece = io.read(s, n - len(buf))
+        if piece == null { break }
+        buf = buf + piece
+    }
+    if len(buf) == 0 { null } else { buf }
+}
+
+fs.write("ten.txt", "abcdefghij")
+s = fs.open("ten.txt")
+print(len(read_up_to(s, 4)))   # 4
+```
+
+`io.read_exact(s, n)` gives exactly `n` or raises when the stream ends first.
+To send or hash a part without holding it at all, use `io.limit(s, n)`
+(unreleased, after 0.66), a stream of just those bytes.
+
+## 35. Assigning to an imported name hides the module
+
+```ecko
+import std.json
+
+fn build() {
+    json = "text"  # a new binding: `json` is a string for the rest of build()
+    json
+}
+print(build())  # text
+print(json.encode([1]))  # [1] - outside build() the module is untouched
+```
+
+The trap is the next line inside `build()`: `json.encode(...)` there fails with
+`Can't access field 'encode' of string`. Use another name for the local.
+
+**Version matters for imported files.** On 0.66, the same function in a file
+you `import` did not make a local: it replaced that file's `json` for the whole
+program, so one call broke `json.encode` in every later call into the module,
+far from the cause, and `ecko check` said nothing. After 0.66 (unreleased) both
+cases make a local, and `ecko check` warns with `shadows-import` (`let json =
+...` silences it when the shadow is deliberate). Until then, never reuse an
+import's name for a local in a module.

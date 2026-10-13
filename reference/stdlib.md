@@ -1,6 +1,6 @@
 # Standard library index
 
-34 modules with fixed exports, 341 functions, plus `std.defaults` (below).
+34 modules with fixed exports, 342 functions, plus `std.defaults` (below).
 0.61 removed six modules and the string-building half of `std.term`, all
 deprecated in 0.59; using one is an error naming the replacement:
 
@@ -55,7 +55,7 @@ top-level key becomes a member, keeping its JSON type.
 | `std.hash` | sha1/sha256/md5, HMAC, authenticated encryption, Argon2id passwords, constant-time compare | 14 |
 | `std.http` | HTTP client (get/head/post/put/patch/delete) + server (serve, port, stop) + responses | 14 |
 | `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 9 |
-| `std.io` | the stream verbs for files, sockets, pipes, HTTP bodies; stdin/stdout/stderr | 16 |
+| `std.io` | the stream verbs for files, sockets, pipes, HTTP bodies; stdin/stdout/stderr | 17 |
 | `std.json` | encode/decode, read/write files | 4 |
 | `std.llm` | low-level chat access under the `ai` keyword | 2 |
 | `std.log` | levelled logging, sinks, rotation, JSON format | 8 |
@@ -107,7 +107,7 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.image`** (9) - `crop`, `decode`, `dimensions`, `encode`, `height`, `load`, `resize`, `save`, `width`
 
-**`std.io`** (16) - `close`, `lines`, `print`, `read`, `read_all`, `read_exact`, `read_line`, `read_text`, `read_until`, `seek`, `stderr`, `stdin`, `stdout`, `tell`, `timeout`, `write`
+**`std.io`** (17) - `close`, `limit`, `lines`, `print`, `read`, `read_all`, `read_exact`, `read_line`, `read_text`, `read_until`, `seek`, `stderr`, `stdin`, `stdout`, `tell`, `timeout`, `write`
 
 **`std.json`** (4) - `decode`, `encode`, `read`, `write`
 
@@ -179,11 +179,17 @@ first = io.read_line(s)
 mark = io.tell(s)                              # 2 - just past "a\n"
 io.seek(s, mark)
 print(io.read_line(s))                         # bb
+part = io.limit(s, 3)                          # the next 3 bytes of s, then the end
+print(string(io.read(part, 100)))              # ccc
+print(io.read(part))                           # null - and s is now 3 bytes on
 
 fs.mkdir("tree/sub")
 fs.write("tree/sub/a.txt", "hi")
 fs.symlink("sub/a.txt", "tree/link")
 for e in fs.walk("tree") { print(e.kind + " " + e.path) }   # symlink tree/link, dir tree/sub, file ...
+mut unreadable = []
+entries = fs.walk("tree", on_error: fn(e) { unreadable = push(unreadable, e.path) })
+print(len(unreadable))                         # 0 - a chmod 000 directory would be listed here
 print(fs.readlink("tree/link"))                # sub/a.txt - as stored, not resolved
 fs.set_modified("tree/sub/a.txt", 1700000000000)
 print(fs.modified("tree/sub/a.txt"))           # 1700000000000
@@ -286,12 +292,22 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   with a 30000 ms read deadline (`ECKO_NET_TIMEOUT_MS`), a pipe and an HTTP body
   with none; `io.timeout(s, ms)` sets one and returns the stream, and passing it
   raises `kind: "io"` rather than returning `null`, so a slow peer is never
-  mistaken for the end.
+  mistaken for the end. **`io.read(s, n)` is one read and can return fewer than
+  `n` bytes before the end, on any stream - a file read takes at most 1 MiB**;
+  use `read_exact` when the count matters (gotcha 34). `limit(s, n)`
+  (unreleased, after 0.66) is a stream of the next `n` bytes of `s`, then the
+  end; `s` is left exactly that far on, so consecutive limits cut a file into
+  parts. It works wherever a stream does - `http.put(url, body: io.limit(s,
+  part_size))` uploads one part in constant memory with `content-length`, and
+  `hash.sha256(io.limit(s, n))` digests just that slice. Closing a limit does
+  not close `s`.
 - **`std.fs`** (0.66) - `walk(path)` returns `{ path, is_dir, kind, size,
   mtime }` for every entry, `kind` being `"file"`, `"dir"`, `"symlink"` or
   `"other"`; it does not follow symlinks, and **raises `kind: "fs"` with the
-  `path` on a directory it cannot read** (the whole walk stops - use
-  `list_dir` yourself to skip and carry on). `readlink(path)` is a link's
+  `path` on a directory it cannot read** (the whole walk stops). To skip and
+  carry on, pass `on_error: fn(e) ...` (unreleased, after 0.66): each
+  unreadable directory goes to it as that same `{ kind, message, path }`, its
+  contents are left out, and the walk continues. `readlink(path)` is a link's
   target as stored, even when it dangles. `set_modified(path, ms)` sets the
   mtime in the unit `modified` returns. A file name that is not valid UTF-8
   lists with each bad byte as one private-use character (U+F780-U+F7FF) that

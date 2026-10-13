@@ -285,6 +285,12 @@ A module may define a name a builtin already has (`fn get(m, k)` in a package);
 `core.get`, `core.join` and so on still reach the builtin, since `core` holds
 every global.
 
+**Never assign to an imported name.** `json = x` after `import std.json` makes
+a new binding that hides the module from there on (gotcha 35). In 0.66 a
+function in an *imported* file doing this replaced that file's `json` for every
+caller; after 0.66 it is a local, like a builtin name, and `ecko check` warns
+(`shadows-import`). Pick another name - `payload`, not `xml` or `json`.
+
 `ecko init` scaffolds `ecko.json`. `ecko get <host/owner/repo>[@version]`
 fetches, vendors and pins a sha256 in `ecko.lock`; `ecko install` rebuilds
 `vendor/` from the lock. **A package's manifest `module` must equal the path it

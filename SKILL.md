@@ -275,7 +275,11 @@ for line in io.lines(fs.open("notes.txt")) {
 The verbs are `read`, `read_text`, `read_line`, `read_exact`, `read_until`,
 `write`, `timeout`, `close` and `lines`, plus `tell` and `seek` for a file's
 byte offset - store `io.tell(s)` as a checkpoint and `io.seek` back to it to
-resume a large file. With no stream, `io.read_line()`, `io.lines()` and
+resume a large file - and `limit(s, n)` (unreleased, after 0.66), a stream of
+the next `n` bytes of `s`, which is how to upload or hash one part of a large
+file without reading it into memory. `io.read(s, n)` is a single read and can
+return fewer than `n` bytes before the end, even on a file; use `read_exact`
+when the count matters. With no stream, `io.read_line()`, `io.lines()` and
 `io.read_all()` read standard input; `io.stdin()`, `io.stdout()` and
 `io.stderr()` are the console as streams, so stderr is
 `io.write(io.stderr(), "msg\n")`.
@@ -402,7 +406,7 @@ replacement: mostly a package (`cli`, `humanize`, `tui`), sometimes a builtin
 `eprint` or `hash`. `reference/builtins.md` is the probed list of all 108, with
 replacements for the names that feel like they should exist.
 
-`reference/gotchas.md` has 33 traps with the exact error each produces.
+`reference/gotchas.md` has 35 traps with the exact error each produces.
 
 ## Reference files
 
@@ -412,9 +416,9 @@ replacements for the names that feel like they should exist.
   packages, channels, templates, contracts
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
-- `reference/stdlib.md` - all 35 `std.*` modules and their 341 exports, with
+- `reference/stdlib.md` - all 35 `std.*` modules and their 342 exports, with
   what was removed in 0.61 and its replacement
-- `reference/gotchas.md` - 33 traps, with the error each produces
+- `reference/gotchas.md` - 35 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs: typed extraction, a
   grounded agent, an HTTP API, a CLI on the `cli` package, a worker with
   graceful shutdown and child processes, an in-process server test
