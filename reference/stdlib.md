@@ -1,6 +1,6 @@
 # Standard library index
 
-34 modules with fixed exports, 333 functions, plus `std.defaults` (below).
+34 modules with fixed exports, 341 functions, plus `std.defaults` (below).
 0.61 removed six modules and the string-building half of `std.term`, all
 deprecated in 0.59; using one is an error naming the replacement:
 
@@ -51,9 +51,9 @@ top-level key becomes a member, keeping its JSON type.
 | `std.dns` | DNS lookups | 3 |
 | `std.encoding` | base64, hex, url encoding | 8 |
 | `std.fmt` | `format` templates, `fixed` decimals, `inspect` for any value | 3 |
-| `std.fs` | filesystem: read, write, glob, walk, temp files | 29 |
-| `std.hash` | sha1/sha256, HMAC, Argon2id passwords, constant-time compare | 9 |
-| `std.http` | HTTP client (get/post/put/patch/delete) + server (serve, port, stop) + responses | 13 |
+| `std.fs` | filesystem: read, write, glob, walk, links, mtimes, temp files | 31 |
+| `std.hash` | sha1/sha256/md5, HMAC, authenticated encryption, Argon2id passwords, constant-time compare | 14 |
+| `std.http` | HTTP client (get/head/post/put/patch/delete) + server (serve, port, stop) + responses | 14 |
 | `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 9 |
 | `std.io` | the stream verbs for files, sockets, pipes, HTTP bodies; stdin/stdout/stderr | 16 |
 | `std.json` | encode/decode, read/write files | 4 |
@@ -98,11 +98,11 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.fmt`** (3) - `fixed`, `format`, `inspect`
 
-**`std.fs`** (29) - `append`, `basename`, `canonical`, `chmod`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `read`, `read_bytes`, `remove`, `rename`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
+**`std.fs`** (31) - `append`, `basename`, `canonical`, `chmod`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `read`, `read_bytes`, `readlink`, `remove`, `rename`, `set_modified`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
 
-**`std.hash`** (9) - `constant_eq`, `hmac_sha256`, `hmac_sha256_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `verify`
+**`std.hash`** (14) - `constant_eq`, `decrypt`, `encrypt`, `hmac_sha256`, `hmac_sha256_bytes`, `key`, `md5`, `md5_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `verify`
 
-**`std.http`** (13) - `delete`, `get`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
+**`std.http`** (14) - `delete`, `get`, `head`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
 
 
 **`std.image`** (9) - `crop`, `decode`, `dimensions`, `encode`, `height`, `load`, `resize`, `save`, `width`
@@ -165,6 +165,7 @@ import std.json
 import std.csv
 import std.fs
 import std.io
+import std.hash
 
 print(json.decode(r"""{"fee": 0.30}""", decimal: true).fee)   # 0.30
 
@@ -178,6 +179,19 @@ first = io.read_line(s)
 mark = io.tell(s)                              # 2 - just past "a\n"
 io.seek(s, mark)
 print(io.read_line(s))                         # bb
+
+fs.mkdir("tree/sub")
+fs.write("tree/sub/a.txt", "hi")
+fs.symlink("sub/a.txt", "tree/link")
+for e in fs.walk("tree") { print(e.kind + " " + e.path) }   # symlink tree/link, dir tree/sub, file ...
+print(fs.readlink("tree/link"))                # sub/a.txt - as stored, not resolved
+fs.set_modified("tree/sub/a.txt", 1700000000000)
+print(fs.modified("tree/sub/a.txt"))           # 1700000000000
+
+print(hash.md5("abc"))                         # 900150983cd24fb0d6963f7d28e17f72
+k = hash.key()
+sealed = hash.encrypt(k, "card 4242", aad: "user:7")
+print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
 ```
 
 - **`std.re`** - `find` and `captures` answer a miss with `null`; `find_all` and
@@ -186,11 +200,21 @@ print(io.read_line(s))                         # bb
 - **Options are named arguments** (since 0.58): `json.decode(s, decimal:
   true)`, `proc.run(cmd, args, timeout_ms: 5000)`, `http.get(url, timeout:
   2000)`. A map in their place is refused (`positional-options`), as is an
-  option the function does not have. Maps that are data - `http.response`
-  headers, log fields - stay maps.
+  option the function does not have. Maps that are data - header and log
+  fields - stay maps: `http.response(201, body, headers: { location: "/x" })`
+  (the positional third argument still works).
 - **`std.time`** - `now()` is milliseconds since the epoch and `monotonic()` is
   milliseconds on a steady clock, both Int; `monotonic_ns()` is the steady
   clock in nanoseconds. Every duration in Ecko is milliseconds since 0.58.
+- **`std.http` client** - a `body:` that is `bytes` is sent exactly as it
+  is, so files and images upload intact; a string is sent as UTF-8. A `body:`
+  that is a byte stream is sent as it is read - `http.put(url, body:
+  fs.open(path))` uploads a file in constant memory, with the file's size as
+  `content-length` (a seeked stream sends what is left). A stream body cannot
+  be resent, so reopen the file to retry. `http.head(url)` answers status and
+  headers with an empty body. Response header values are UTF-8, or Latin-1
+  when they are not valid UTF-8 - never dropped. Connections are pooled for the
+  life of the program. All since 0.66.
 - **`std.http`** - `serve` binds `0.0.0.0` unless you pass `host:`. `serve(0,
   handler)` asks the operating system for a free port, and `http.port()` reads
   back which one it chose, from a handler or a task spawned before `serve`. A streaming
@@ -222,7 +246,10 @@ print(io.read_line(s))                         # bb
   `spawn` gives a handle whose `proc.stdin`/`stdout`/`stderr` are streams for
   `std.io`; `io.close(proc.stdin(p))` sends end of input. `wait(p)` with no
   deadline is a poll (`null` while running); `wait(p, ms)` kills and reaps at
-  the deadline. Deadlines and `kill` signal the whole process group. A spawned
+  the deadline. `kill(p, signal?)` sends `"term"` (default), `"kill"`, `"int"`
+  or `"hup"` and only signals: the handle stays valid, so `wait(p, ms)`
+  afterwards returns the exit status (`code: -1` when a signal ended it).
+  Deadlines and `kill` signal the whole process group. A spawned
   child is signalled when your program ends, unless you pass `detach: true`.
   Nothing you spawn outlives you by accident. Recipe 11 drives one.
 - **`std.signal`** - `on(names?)` subscribes (default `["term", "int"]`),
@@ -260,6 +287,23 @@ print(io.read_line(s))                         # bb
   with none; `io.timeout(s, ms)` sets one and returns the stream, and passing it
   raises `kind: "io"` rather than returning `null`, so a slow peer is never
   mistaken for the end.
+- **`std.fs`** (0.66) - `walk(path)` returns `{ path, is_dir, kind, size,
+  mtime }` for every entry, `kind` being `"file"`, `"dir"`, `"symlink"` or
+  `"other"`; it does not follow symlinks, and **raises `kind: "fs"` with the
+  `path` on a directory it cannot read** (the whole walk stops - use
+  `list_dir` yourself to skip and carry on). `readlink(path)` is a link's
+  target as stored, even when it dangles. `set_modified(path, ms)` sets the
+  mtime in the unit `modified` returns. A file name that is not valid UTF-8
+  lists with each bad byte as one private-use character (U+F780-U+F7FF) that
+  every `fs` function maps back, so listed names always open.
+  `match(path, pattern)` - in that order; swapped, it throws.
+- **`std.hash`** (0.66) - `md5(data)` / `md5_bytes(data)` take a string,
+  bytes or a stream like `sha256` (`Content-MD5` is
+  `encoding.base64_encode(hash.md5_bytes(data))`); MD5 is not for security.
+  `key()` is a random 32-byte key; `encrypt(key, data, aad: ctx)` seals bytes
+  or a string with ChaCha20-Poly1305 and a fresh nonce; `decrypt(key, sealed,
+  aad: ctx)` returns the bytes. A wrong key, different `aad:` or altered data
+  throws `kind: "crypto"`. Streams are not accepted by `encrypt`.
 - **`std.web`** - `web.static(dir)` needs the `fs:read` capability on `dir`,
   like reading the files yourself would.
 - **Every module** rejects extra arguments now, so a stray argument is an error

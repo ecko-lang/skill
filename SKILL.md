@@ -41,8 +41,10 @@ after the file is the program's own arguments, read with `os.args()`.
    (`mut n = n` to get a changeable copy), and a function writing a top-level
    name (it must be `mut`). `ecko check` refuses a reassignment
    (`immutable-reassign`) before the program runs.
-2. **A newline ends a statement.** No semicolons. Lines continue only after a
-   trailing binary operator, before a leading `|>` or `.`, or inside `(...)`/`[...]`.
+2. **A newline ends a statement.** Lines continue only after a trailing binary
+   operator, before a leading `|>` or `.`, or inside `(...)`/`[...]`. Since
+   0.66 `;` also separates statements on one line (`for x in xs { a(x); b(x) }`);
+   `ecko fmt` splits them back onto separate lines.
 3. **Access is strict.** `m.missing` and `xs[99]` are errors. `get(m, k)` is the
    nullable lookup that returns `null`.
 4. **Everything runs offline.** With no `ECKO_AI_API_KEY`, `ai` returns
@@ -283,6 +285,11 @@ resume a large file. With no stream, `io.read_line()`, `io.lines()` and
 short: `read_exact` below its count, `read_until` with no delimiter, a
 character cut in half. So `null` means clean end, and an error means truncated.
 
+A stream is also a request body: `http.put(url, body: fs.open(path))` uploads
+a file without reading it into memory (since 0.66, along with `bytes` bodies
+being sent exactly). `hash.sha256(s)` and `hash.md5(s)` digest a stream the same
+way.
+
 `io.timeout(s, ms)` sets a deadline and raises when it passes. `ECKO_LIMIT_ALLOC`
 bounds each piece rather than the whole stream.
 
@@ -333,7 +340,9 @@ test.case("errors", fn() {
 ```
 
 `ecko test` discovers `tests/*.ecko` and `*_test.ecko`, exits non-zero on
-failure, and forces mock mode. Put tests in `tests/` - a root-level
+failure, and forces mock mode. Since 0.66 each file runs in its own process, so
+module state and in-process servers cannot leak between files; `ecko test
+--jobs N` runs N files at once with the same report. Put tests in `tests/` - a root-level
 `*_test.ecko` ships inside `ecko pack` archives.
 
 ## The ten mistakes an LLM makes first
@@ -393,7 +402,7 @@ replacement: mostly a package (`cli`, `humanize`, `tui`), sometimes a builtin
 `eprint` or `hash`. `reference/builtins.md` is the probed list of all 108, with
 replacements for the names that feel like they should exist.
 
-`reference/gotchas.md` has 31 traps with the exact error each produces.
+`reference/gotchas.md` has 33 traps with the exact error each produces.
 
 ## Reference files
 
@@ -403,9 +412,9 @@ replacements for the names that feel like they should exist.
   packages, channels, templates, contracts
 - `reference/ai.md` - the AI surface in depth: typed coercion, retries, tool
   specs, sessions, vision, budgets, tracing
-- `reference/stdlib.md` - all 35 `std.*` modules and their 333 exports, with
+- `reference/stdlib.md` - all 35 `std.*` modules and their 341 exports, with
   what was removed in 0.61 and its replacement
-- `reference/gotchas.md` - 31 traps, with the error each produces
+- `reference/gotchas.md` - 33 traps, with the error each produces
 - `reference/recipes.md` - complete, verified programs: typed extraction, a
   grounded agent, an HTTP API, a CLI on the `cli` package, a worker with
   graceful shutdown and child processes, an in-process server test

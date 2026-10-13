@@ -9,6 +9,16 @@ A newline ends a statement. An expression continues across a newline only when
 the line ends with a binary operator, the next line starts with `|>` or `.`, or
 you are inside `(...)` / `[...]`.
 
+Since 0.66 `;` also ends a statement, so a short body fits on one line:
+`for i in 0..3 { a(i); b(i) }`. It works at top level and in every block; a
+trailing `;` is accepted. Inside `(...)`, `[...]` or a map literal it is an
+error. `ecko fmt` puts each statement on its own line again.
+
+```ecko
+mut total = 0
+for i in 0..3 { total = total + i; print(total) }
+```
+
 `#` is a comment to end of line; there is no block comment. `##` is a
 **documentation comment** read by `ecko doc`, attached to the declaration on the
 next line. `### heading` is content, not a third marker.
@@ -354,12 +364,15 @@ There is no `--key` flag: set `ECKO_AI_API_KEY`.
 ```
 ecko file.ecko              run
 ecko                        REPL
-ecko check file.ecko        static analysis (--strict fails on warnings)
+ecko check file.ecko        static analysis of the file and every local file it
+                            imports (--strict fails on warnings)
 ecko fmt [--check] file     canonical formatting; migrates deprecated syntax
-ecko test [paths]           run tests, mock mode forced
+ecko test [paths]           run tests, one process per file, mock mode forced
+                            (--jobs N runs N files at once)
 ecko doc file.ecko          generate markdown from ## comments
 ecko lsp                    language server
-ecko build file.ecko -o app single self-contained executable
+ecko build file.ecko -o app single self-contained executable; bundles every
+                            local file the entry imports, ecko.json or not
 ecko init                   scaffold ecko.json
 ecko scaffold <tmpl> <path> a whole project from a template (--list)
 ecko get / install / remove / pack     package management

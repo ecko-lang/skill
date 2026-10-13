@@ -168,6 +168,11 @@ list(0..30000000)
 `insert(list, i, v)` grows the list. Reaching for `insert` when you meant `set`
 silently lengthens your data.
 
+Building a map with `m = set(m, k, v)` in a loop is linear since 0.66: `set`,
+`pop`, `take`, `drop` and `remove` update in place when nothing else holds the
+collection, as `push` always did. Before 0.66 each call copied, so 100,000 keys
+took minutes; you no longer need `group_by` or a cursor to avoid that.
+
 ## 12. `cell_set` on a counter races
 
 ```ecko
@@ -502,3 +507,32 @@ if xs { print("some") }
 
 Write the comparison: `if len(xs) > 0`, `if count != 0`, `if name != ""`.
 `if x = 2` is a parse error that says to write `==`.
+
+## 32. `fs.walk` stops at a directory it cannot read (since 0.66)
+
+Before 0.66 an unreadable directory came back as an empty one, silently. Now
+`fs.walk` throws `kind: "fs"` with the `path`, and the whole walk stops, so a
+`chmod 000` directory deep in a tree means no listing at all:
+
+```ecko
+import std.fs
+fs.mkdir("tree/ok")
+fs.write("tree/ok/a.txt", "hi")
+for e in fs.walk("tree") { print(e.kind + " " + e.path) }
+```
+
+When you want to report an unreadable directory and carry on (a backup, an
+indexer), walk it yourself: `fs.list_dir` on each directory inside a `try`,
+with a queue of directories still to visit. Each `walk` entry is
+`{ path, is_dir, kind, size, mtime }`, `kind` one of `"file"`, `"dir"`,
+`"symlink"`, `"other"`, and symlinks are not followed.
+
+## 33. `fs.match` is `(path, pattern)`
+
+```ecko
+import std.fs
+print(fs.match("notes.txt", "*.txt"))   # true
+```
+
+`fs.match("*.txt", "notes.txt")` used to answer `false` for everything. Since
+0.66 it throws, saying the arguments look swapped.

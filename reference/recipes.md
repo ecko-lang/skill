@@ -346,8 +346,10 @@ print(proc.wait(slow, 50).timed_out)    # true - killed and reaped at 50 ms
   file. A pipe has no deadline until `io.timeout(proc.stdout(p), ms)` sets one.
 - A deadline signals the child's whole process group, `SIGTERM` then `SIGKILL`,
   so `sh -c "..."` cannot leave a grandchild running. `proc.kill(p)` sends
-  `SIGTERM` to the group (`proc.kill(p, "kill")` for `SIGKILL`) and finishes
-  the handle, so a later `proc.wait(p)` is an error. Every spawned child is
+  `SIGTERM` to the group (`proc.kill(p, "kill")` for `SIGKILL`, also `"int"`
+  and `"hup"`) and only signals: since 0.66 the handle stays valid, so
+  `proc.wait(p, 5000)` afterwards returns the exit status - how a test checks
+  that a server shut down cleanly on `SIGTERM` (`code: 0`). Every spawned child is
   signalled when your program exits unless spawned with `detach: true`.
 
 ## 12. Testing a server in-process
