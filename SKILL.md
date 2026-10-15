@@ -27,7 +27,9 @@ ecko test                # discovers tests/*.ecko and *_test.ecko
 
 `ecko check` runs automatically before every `ecko file.ecko`, and an
 error-severity finding **stops the program before it starts**. Treat a clean
-`ecko check` as the bar for "I finished."
+`ecko check` as the bar for "I finished." A file that does not parse lists
+every syntax error in it (since 0.70), so fix them all in one pass; the other
+findings appear once it parses.
 
 `ecko --help` is authoritative and current. Prefer it over memory. Ecko's own
 flags go **before** the file (`ecko --provider ollama app.ecko`); everything
