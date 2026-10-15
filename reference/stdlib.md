@@ -1,6 +1,6 @@
 # Standard library index
 
-34 modules with fixed exports, 342 functions, plus `std.defaults` (below).
+34 modules with fixed exports, 356 functions, plus `std.defaults` (below).
 0.61 removed six modules and the string-building half of `std.term`, all
 deprecated in 0.59; using one is an error naming the replacement:
 
@@ -51,8 +51,8 @@ top-level key becomes a member, keeping its JSON type.
 | `std.dns` | DNS lookups | 3 |
 | `std.encoding` | base64, hex, url encoding | 8 |
 | `std.fmt` | `format` templates, `fixed` decimals, `inspect` for any value | 3 |
-| `std.fs` | filesystem: read, write, glob, walk, links, mtimes, temp files | 31 |
-| `std.hash` | sha1/sha256/md5, HMAC, authenticated encryption, Argon2id passwords, constant-time compare | 14 |
+| `std.fs` | filesystem: read, write, glob, walk, links, mtimes, owners, exclusive create, temp files | 34 |
+| `std.hash` | sha256/sha512/sha3/blake2b/sha1/md5, incremental hashers, HMAC, authenticated encryption, Argon2id passwords, constant-time compare | 24 |
 | `std.http` | HTTP client (get/head/post/put/patch/delete) + server (serve, port, stop) + responses | 14 |
 | `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 9 |
 | `std.io` | the stream verbs for files, sockets, pipes, HTTP bodies; stdin/stdout/stderr | 17 |
@@ -69,7 +69,7 @@ top-level key becomes a member, keeping its JSON type.
 | `std.sql` | embedded SQLite with transactions (Postgres/MySQL are the `postgres`/`mysql` packages) | 9 |
 | `std.str` | the full string surface | 52 |
 | `std.term` | TTY state, colour check, size, raw mode, keys; styling is the `tui` package | 6 |
-| `std.test` | test cases and assertions for `ecko test` | 6 |
+| `std.test` | test cases, assertions and skips for `ecko test` | 7 |
 | `std.time` | clock (ms), format, parse, monotonic / monotonic_ns | 8 |
 | `std.toml` | TOML parse/stringify | 4 |
 | `std.uuid` | v4 (random) and v7 (time-ordered) ids | 2 |
@@ -98,9 +98,9 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.fmt`** (3) - `fixed`, `format`, `inspect`
 
-**`std.fs`** (31) - `append`, `basename`, `canonical`, `chmod`, `copy`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `read`, `read_bytes`, `readlink`, `remove`, `rename`, `set_modified`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
+**`std.fs`** (34) - `append`, `basename`, `canonical`, `chmod`, `chown`, `copy`, `create_new`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `owner`, `read`, `read_bytes`, `readlink`, `remove`, `rename`, `set_modified`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
 
-**`std.hash`** (14) - `constant_eq`, `decrypt`, `encrypt`, `hmac_sha256`, `hmac_sha256_bytes`, `key`, `md5`, `md5_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `verify`
+**`std.hash`** (24) - `blake2b`, `blake2b_bytes`, `constant_eq`, `decrypt`, `encrypt`, `finish`, `finish_bytes`, `hasher`, `hmac_sha256`, `hmac_sha256_bytes`, `key`, `md5`, `md5_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `sha3_256`, `sha3_256_bytes`, `sha512`, `sha512_bytes`, `update`, `verify`
 
 **`std.http`** (14) - `delete`, `get`, `head`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
 
@@ -137,7 +137,7 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.term`** (6) - `color_enabled`, `is_tty`, `poll`, `raw_mode`, `read_key`, `size`
 
-**`std.test`** (6) - `case`, `eq`, `err`, `fail`, `group`, `ok`
+**`std.test`** (7) - `case`, `eq`, `err`, `fail`, `group`, `ok`, `skip`
 
 **`std.time`** (8) - `format`, `format_local`, `monotonic`, `monotonic_ns`, `now`, `now_iso`, `parse`, `parse_format`
 
@@ -295,7 +295,7 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   mistaken for the end. **`io.read(s, n)` is one read and can return fewer than
   `n` bytes before the end, on any stream - a file read takes at most 1 MiB**;
   use `read_exact` when the count matters (gotcha 34). `limit(s, n)`
-  (unreleased, after 0.66) is a stream of the next `n` bytes of `s`, then the
+  (0.67) is a stream of the next `n` bytes of `s`, then the
   end; `s` is left exactly that far on, so consecutive limits cut a file into
   parts. It works wherever a stream does - `http.put(url, body: io.limit(s,
   part_size))` uploads one part in constant memory with `content-length`, and
@@ -305,7 +305,7 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   mtime }` for every entry, `kind` being `"file"`, `"dir"`, `"symlink"` or
   `"other"`; it does not follow symlinks, and **raises `kind: "fs"` with the
   `path` on a directory it cannot read** (the whole walk stops). To skip and
-  carry on, pass `on_error: fn(e) ...` (unreleased, after 0.66): each
+  carry on, pass `on_error: fn(e) ...` (0.67): each
   unreadable directory goes to it as that same `{ kind, message, path }`, its
   contents are left out, and the walk continues. `readlink(path)` is a link's
   target as stored, even when it dangles. `set_modified(path, ms)` sets the
@@ -313,6 +313,12 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   lists with each bad byte as one private-use character (U+F780-U+F7FF) that
   every `fs` function maps back, so listed names always open.
   `match(path, pattern)` - in that order; swapped, it throws.
+- **`std.fs`** (0.68) - `exists(p, follow: false)` answers for a symlink
+  itself, so a dangling link counts. `create_new(path, data)` creates a file
+  only if nothing is at the path and returns `true`/`false` - an atomic lock;
+  `open(path, "x")` is the stream form and throws `kind: "fs"` when taken.
+  `owner(p)` is `{ uid, gid }`; `chown(p, uid, gid)` sets it; both take
+  `follow: false` for the link itself. Unix only.
 - **`std.hash`** (0.66) - `md5(data)` / `md5_bytes(data)` take a string,
   bytes or a stream like `sha256` (`Content-MD5` is
   `encoding.base64_encode(hash.md5_bytes(data))`); MD5 is not for security.
@@ -320,6 +326,13 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   or a string with ChaCha20-Poly1305 and a fresh nonce; `decrypt(key, sealed,
   aad: ctx)` returns the bytes. A wrong key, different `aad:` or altered data
   throws `kind: "crypto"`. Streams are not accepted by `encrypt`.
+- **`std.hash`** (0.68, 0.69) - `hasher(algo)` / `update(h, data)` /
+  `finish(h)` (`finish_bytes` for raw) hash in pieces, so one read gives a
+  whole-file hash and per-part hashes. A hasher is a value: `update` returns a
+  new one. 0.69 adds `sha512`, `sha3_256` and `blake2b` (512-bit, matches
+  `b2sum`), each with `_bytes`; `hasher` takes every digest except `blake2b`.
+- **`std.test`** (0.69) - `skip(reason)` ends the case as SKIP, counted apart;
+  see Testing in SKILL.md.
 - **`std.web`** - `web.static(dir)` needs the `fs:read` capability on `dir`,
   like reading the files yourself would.
 - **Every module** rejects extra arguments now, so a stray argument is an error

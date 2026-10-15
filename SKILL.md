@@ -206,8 +206,8 @@ Use `get(e, "kind")` rather than `e.kind`. Every error the runtime throws has a
 `get` is total, so the same match handles a thrown string (its `kind` is `null`).
 
 Kinds: `ai`, `archive`, `assert`, `budget`, `bug`, `cancelled`, `capability`,
-`closed`, `fs`, `io`, `limit`, `net`, `os`, `parse`, `proc`, `signal`, `sql`,
-`timeout`, `watch`. `bug` is a programmer mistake (wrong type or arity, an index
+`closed`, `crypto`, `fs`, `io`, `limit`, `net`, `os`, `parse`, `proc`, `signal`,
+`skip`, `sql`, `timeout`, `watch`. `bug` is a programmer mistake (wrong type or arity, an index
 out of bounds, a missing field): fix the code rather than dispatch on it.
 
 `io` is a stream that failed or was closed under you. `limit` is a configured
@@ -217,8 +217,32 @@ variable that raises it), so you can report both without scraping the message.
 For your own recoverable failures, throw the same shape:
 `error({ kind: "not_found", message: "no user 0" })`.
 
-`try` takes an optional `finally` block, which runs whether or not the body
-raised. Use it to release something you acquired, not to hide a failure.
+`finally` is cleanup, not a handler. It runs on every way out of the `try`, and
+**with no `catch`, the error carries on to the caller once the `finally` has run**
+(since 0.69; before that it was silently swallowed):
+
+```ecko
+fn save(log, line) {
+    cell_update(log, fn(l) push(l, "lock"))
+    try {
+        if line == "" { error({ kind: "parse", message: "empty line" }) }
+        line
+    } finally {
+        cell_update(log, fn(l) push(l, "unlock"))  # runs either way
+    }
+}
+
+log = cell([])
+print(save(log, "ok"))  # ok
+got = try { save(log, "") } catch (e) { get(e, "kind") }
+assert(got == "parse", "the error reached the caller")
+print(cell_get(log))  # [lock, unlock, lock, unlock]
+```
+
+A `try` with neither `catch` nor `finally` is the one form that ignores an error:
+`try { ... }` is `try { ... } catch { null }`, so any failure, a `bug` included,
+becomes `null`. Reach for it only when a failure really means "nothing", and
+catch by `kind` otherwise.
 
 An uncaught error prints the message, the line that raised it as
 `--> file:line:col`, and the call stack **outermost call first**, one
@@ -330,6 +354,7 @@ and #12 are both, runnable.
 ## Testing
 
 ```ecko
+import std.os
 import std.test
 
 fn slug(s) = replace(lower(s), " ", "-")
@@ -341,10 +366,17 @@ test.case("slugify", fn() {
 test.case("errors", fn() {
     test.err(fn() error("boom"), "boom")
 })
+test.case("restores file owners", fn() {
+    if os.env("USER") != "root" { test.skip("needs root") }
+    test.ok(true)
+})
 ```
 
 `ecko test` discovers `tests/*.ecko` and `*_test.ecko`, exits non-zero on
-failure, and forces mock mode. Since 0.66 each file runs in its own process, so
+failure, and forces mock mode. **`test.skip(reason)`** (0.69) ends a case that
+cannot run here as `SKIP <name> - <reason>`, counted apart in the summary
+(`1 passed, 0 failed, 1 skipped`) and not a failure. Never `return` early
+instead: that reports `ok` for a case that checked nothing. Since 0.66 each file runs in its own process, so
 module state and in-process servers cannot leak between files; `ecko test
 --jobs N` runs N files at once with the same report. Put tests in `tests/` - a root-level
 `*_test.ecko` ships inside `ecko pack` archives.
