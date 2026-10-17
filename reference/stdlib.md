@@ -234,7 +234,8 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   the program exits 0; a second signal forces it. `http.port()` is `null` when
   no server is running. Recipe 12 tests a server in-process with all three.
   Handlers are share-nothing: since 0.65 a captured `mut` is a per-request copy
-  (before, handlers raced on it), so count requests with a `cell`.
+  (before, handlers raced on it), so count requests with a `cell`. `on_ws`
+  connections follow the same rule since 0.72, one copy per connection.
 - **`std.net`** - client *and* server. `listen` answers a listener, and
   `accept` answers a connection stream, or `null` when nothing arrived before
   its deadline. A listener is not a stream: reading it yields connections, not

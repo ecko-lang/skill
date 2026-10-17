@@ -270,9 +270,10 @@ print("key={key}")                  # key=[secret]
 print(reveal(key))                  # hunter2 - the only way out
 ```
 
-Use `decimal` for money, always. Mixing `decimal` with `float` is a hard error
-by design. `secret()` redacts through every stringifying sink, so `grep reveal`
-audits every exposure point.
+Use `decimal` for money, always. A decimal holds 28 significant digits, and
+since 0.72 a value with more is refused (a `parse` error) rather than rounded.
+Mixing `decimal` with `float` is a hard error by design. `secret()` redacts
+through every stringifying sink, so `grep reveal` audits every exposure point.
 
 ## Streams
 
@@ -301,7 +302,7 @@ for line in io.lines(fs.open("notes.txt")) {
 The verbs are `read`, `read_text`, `read_line`, `read_exact`, `read_until`,
 `write`, `timeout`, `close` and `lines`, plus `tell` and `seek` for a file's
 byte offset - store `io.tell(s)` as a checkpoint and `io.seek` back to it to
-resume a large file - and `limit(s, n)` (unreleased, after 0.66), a stream of
+resume a large file - and `limit(s, n)` (since 0.67), a stream of
 the next `n` bytes of `s`, which is how to upload or hash one part of a large
 file without reading it into memory. `io.read(s, n)` is a single read and can
 return fewer than `n` bytes before the end, even on a file; use `read_exact`
@@ -342,8 +343,10 @@ cell_update(counter, fn(v) v + 1)            # atomic; do NOT use cell_set for t
 
 Workers are **share-nothing**: each snapshots captured variables. Mutating an
 ordinary outer `mut` from a parallel closure - a `pmap` callback, a task, an
-`http.serve` handler - changes only that call's copy (since 0.65; before, `pmap`
-and handlers raced on it). `cell` is the one intentional exception.
+`http.serve` handler, an `on_ws` connection - changes only that call's copy
+(since 0.65, and since 0.72 for `on_ws`, where each connection keeps its own
+copy until it closes; before, they raced on it). `cell` is the one intentional
+exception.
 
 **Long-running services.** `http.serve` drains on `SIGTERM`/Ctrl-C by itself
 and returns, so the program exits 0. Your own loop subscribes with

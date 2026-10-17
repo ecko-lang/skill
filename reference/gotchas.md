@@ -227,7 +227,7 @@ users** while `tests/foo_test.ecko` does not.
 
 ## 17. Parallel workers see a snapshot
 
-`pmap`, `async` tasks and `http.serve` handlers each snapshot captured
+`pmap`, `async` tasks, `http.serve` handlers and `on_ws` connections each snapshot captured
 variables. Mutating an ordinary outer `mut` changes only that call's copy and
 is silently lost. Share through `cell`, deliberately.
 
@@ -246,7 +246,8 @@ print(cell_get(hits))                # 100
 
 Before 0.65 `pmap` callbacks and `http.serve` handlers wrote the caller's
 variable from every worker at once, so code that counted that way got a
-different wrong number each run. If older code relied on it, move it to a
+different wrong number each run; `on_ws` connections did the same until 0.72.
+If older code relied on it, move it to a
 `cell`, or collect what `pmap` returns.
 
 ---
@@ -522,7 +523,7 @@ for e in fs.walk("tree") { print(e.kind + " " + e.path) }
 ```
 
 When you want to report an unreadable directory and carry on (a backup, an
-indexer), pass `on_error:` (unreleased, after 0.66). Each unreadable directory
+indexer), pass `on_error:` (since 0.67). Each unreadable directory
 goes to the function as the `{ kind: "fs", message, path }` the walk would have
 thrown, its contents are left out, and the walk continues:
 
@@ -577,7 +578,7 @@ print(len(read_up_to(s, 4)))   # 4
 
 `io.read_exact(s, n)` gives exactly `n` or raises when the stream ends first.
 To send or hash a part without holding it at all, use `io.limit(s, n)`
-(unreleased, after 0.66), a stream of just those bytes.
+(since 0.67), a stream of just those bytes.
 
 ## 35. Assigning to an imported name hides the module
 
@@ -598,7 +599,7 @@ The trap is the next line inside `build()`: `json.encode(...)` there fails with
 **Version matters for imported files.** On 0.66, the same function in a file
 you `import` did not make a local: it replaced that file's `json` for the whole
 program, so one call broke `json.encode` in every later call into the module,
-far from the cause, and `ecko check` said nothing. After 0.66 (unreleased) both
-cases make a local, and `ecko check` warns with `shadows-import` (`let json =
-...` silences it when the shadow is deliberate). Until then, never reuse an
+far from the cause, and `ecko check` said nothing. Since 0.67 both cases make
+a local, and `ecko check` warns with `shadows-import` (`let json = ...`
+silences it when the shadow is deliberate). On 0.66 or older, never reuse an
 import's name for a local in a module.
