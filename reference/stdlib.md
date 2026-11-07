@@ -1,6 +1,6 @@
 # Standard library index
 
-34 modules with fixed exports, 356 functions, plus `std.defaults` (below).
+34 modules with fixed exports, 357 functions, plus `std.defaults` (below).
 0.61 removed six modules and the string-building half of `std.term`, all
 deprecated in 0.59; using one is an error naming the replacement:
 
@@ -52,7 +52,7 @@ top-level key becomes a member, keeping its JSON type.
 | `std.encoding` | base64, hex, url encoding | 8 |
 | `std.fmt` | `format` templates, `fixed` decimals, `inspect` for any value | 3 |
 | `std.fs` | filesystem: read, write, glob, walk, links, mtimes, owners, exclusive create, temp files | 34 |
-| `std.hash` | sha256/sha512/sha3/blake2b/sha1/md5, incremental hashers, HMAC, authenticated encryption, Argon2id passwords, constant-time compare | 24 |
+| `std.hash` | sha256/sha512/sha3/blake2b/sha1/md5, incremental hashers, HMAC, authenticated encryption, Argon2id and bcrypt passwords, constant-time compare | 25 |
 | `std.http` | HTTP client (get/head/post/put/patch/delete) + server (serve, port, stop) + responses | 14 |
 | `std.image` | PNG/JPEG as values: load, resize, crop - feeds `ai ... on img` | 9 |
 | `std.io` | the stream verbs for files, sockets, pipes, HTTP bodies; stdin/stdout/stderr | 17 |
@@ -100,7 +100,7 @@ top-level key becomes a member, keeping its JSON type.
 
 **`std.fs`** (34) - `append`, `basename`, `canonical`, `chmod`, `chown`, `copy`, `create_new`, `dirname`, `exists`, `extension`, `glob`, `is_dir`, `is_file`, `is_symlink`, `join`, `list_dir`, `match`, `mkdir`, `mode`, `modified`, `open`, `owner`, `read`, `read_bytes`, `readlink`, `remove`, `rename`, `set_modified`, `size`, `symlink`, `temp_dir`, `temp_file`, `walk`, `write`
 
-**`std.hash`** (24) - `blake2b`, `blake2b_bytes`, `constant_eq`, `decrypt`, `encrypt`, `finish`, `finish_bytes`, `hasher`, `hmac_sha256`, `hmac_sha256_bytes`, `key`, `md5`, `md5_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `sha3_256`, `sha3_256_bytes`, `sha512`, `sha512_bytes`, `update`, `verify`
+**`std.hash`** (25) - `bcrypt`, `blake2b`, `blake2b_bytes`, `constant_eq`, `decrypt`, `encrypt`, `finish`, `finish_bytes`, `hasher`, `hmac_sha256`, `hmac_sha256_bytes`, `key`, `md5`, `md5_bytes`, `password`, `sha1`, `sha1_bytes`, `sha256`, `sha256_bytes`, `sha3_256`, `sha3_256_bytes`, `sha512`, `sha512_bytes`, `update`, `verify`
 
 **`std.http`** (14) - `delete`, `get`, `head`, `html`, `json`, `not_found`, `patch`, `port`, `post`, `put`, `response`, `serve`, `stop`, `text`
 
@@ -332,6 +332,11 @@ print(hash.decrypt(k, sealed, aad: "user:7") == bytes("card 4242"))   # true
   whole-file hash and per-part hashes. A hasher is a value: `update` returns a
   new one. 0.69 adds `sha512`, `sha3_256` and `blake2b` (512-bit, matches
   `b2sum`), each with `_bytes`; `hasher` takes every digest except `blake2b`.
+- **`std.hash`** (0.78) - `bcrypt(password, cost: 10)` makes a bcrypt hash, for
+  user tables that already hold them or a spec that asks for bcrypt; store new
+  ones with `password` (Argon2id). `verify(password, stored)` checks both, so
+  old `$2a$`/`$2b$`/`$2y$` hashes keep working. `cost:` is 4 to 31 (10 is about
+  50 ms); a password over 72 bytes is an error rather than silently cut.
 - **`std.test`** (0.69) - `skip(reason)` ends the case as SKIP, counted apart;
   see Testing in SKILL.md.
 - **`std.web`** - `web.static(dir)` needs the `fs:read` capability on `dir`,

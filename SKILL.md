@@ -185,6 +185,13 @@ rewrites to the short one. A field or parameter that may be missing is `T?`
 (`email: String? = null`); `Option<T>` is deprecated since 0.64 and `ecko fmt`
 rewrites it.
 
+**A type name in an annotation admits only that type** (0.80). With `type Tier =
+Vip | Basic`, `fn h(x: Tier)` throws `expects Tier, got int` for `5`, `"vip"`,
+`null` or a map, and so do fields, return types and `List<Tier>`; `ecko check`
+refuses `h(5)` before the run. Write `Tier?` where `null` is valid and `Any`
+for "anything". A fieldless variant prints as its name: `print(Vip)` is `Vip`
+(not `Vip{}`), so compare values (`t == Vip`), not their rendered text.
+
 Plain maps have no declared types and stay permissive.
 
 ## Errors
@@ -384,7 +391,11 @@ cannot run here as `SKIP <name> - <reason>`, counted apart in the summary
 instead: that reports `ok` for a case that checked nothing. Since 0.66 each file runs in its own process, so
 module state and in-process servers cannot leak between files; `ecko test
 --jobs N` runs N files at once with the same report. Put tests in `tests/` - a root-level
-`*_test.ecko` ships inside `ecko pack` archives.
+`*_test.ecko` ships inside `ecko pack` archives. A failure (0.79) names its line
+(`at tests/a_test.ecko:6`), shows what that case printed (`--no-capture` prints
+as it runs), and `test.eq` on lists or multi-line strings adds a `-`/`+` line
+diff; failure messages quote strings (`expected "a b", got "a  b"`).
+`ecko test --filter TEXT` runs only matching cases, and fails if none match.
 
 ## The ten mistakes an LLM makes first
 

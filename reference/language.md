@@ -238,7 +238,13 @@ print(increment(1))
 ```
 
 `@requires` runs before the body with parameters in scope; `@ensures` runs after
-with `result` also in scope. A false condition raises.
+with `result` also in scope. A false condition raises `kind: "bug"`, located at
+the call, with a message naming the condition and the values it read:
+`precondition failed: x > 0 (x = -3)`. The caught error also has `contract`
+(`"requires"` or `"ensures"`), `condition` and `values` fields, so match on
+those rather than the message text. `assert(cond)` reports the same way
+(`assertion failed: x == 3 (x = 2)`, kind `assert`). Boolean contracts are cheap
+(about the cost of the condition itself), so put them on hot functions too.
 
 String contracts (`@ensures("result is a valid email")`) are judged by the LLM.
 Know what that costs: they are **probabilistic, not proof**; offline they pass
@@ -374,11 +380,13 @@ ecko check file.ecko        static analysis of the file and every local file it
                             imports (--strict fails on warnings)
 ecko fmt [--check] file     canonical formatting; migrates deprecated syntax
 ecko test [paths]           run tests, one process per file, mock mode forced
-                            (--jobs N runs N files at once)
+                            (--jobs N runs N files at once, --filter TEXT
+                            only cases whose name contains TEXT)
 ecko doc file.ecko          generate markdown from ## comments
 ecko lsp                    language server
 ecko build file.ecko -o app single self-contained executable; bundles every
-                            local file the entry imports, ecko.json or not
+                            local file the entry imports, ecko.json or not,
+                            plus data files listed in ecko.json "embed"
 ecko init                   scaffold ecko.json
 ecko scaffold <tmpl> <path> a whole project from a template (--list)
 ecko get / install / remove / pack     package management
